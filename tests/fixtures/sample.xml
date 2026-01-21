@@ -5,7 +5,7 @@
   </folders>
 
   <testCases>
-    <testCase id="401225" key="ES-T560">
+    <testCase id="401225" key="ES-T560" paramType="TEST_DATA">
       <name><![CDATA[Login works]]></name>
       <folder><![CDATA[ui/Blacklists]]></folder>
       <objective><![CDATA[<p>Goal<br/>Line2</p>]]></objective>
@@ -27,6 +27,39 @@
         <attachment><name>file1.csv</name></attachment>
         <attachment><name>file2.xlsx</name></attachment>
       </attachments>
+      <parameters>
+        <parameter index="0">
+          <name><![CDATA[url]]></name>
+        </parameter>
+        <parameter index="1">
+          <name><![CDATA[role]]></name>
+        </parameter>
+      </parameters>
+      <testDataWrapper>
+        <testDataRow>
+          <testDataColumns>
+            <testData index="0">
+              <name><![CDATA[parameter]]></name>
+              <type><![CDATA[free_text_input]]></type>
+              <value><![CDATA[alpha]]></value>
+            </testData>
+            <testData index="1">
+              <name><![CDATA[parameter]]></name>
+              <type><![CDATA[free_text_input]]></type>
+              <value><![CDATA[beta]]></value>
+            </testData>
+          </testDataColumns>
+        </testDataRow>
+        <testDataRow>
+          <testDataColumns>
+            <testData index="0">
+              <name><![CDATA[parameter]]></name>
+              <type><![CDATA[free_text_input]]></type>
+              <value><![CDATA[gamma]]></value>
+            </testData>
+          </testDataColumns>
+        </testDataRow>
+      </testDataWrapper>
       <testScript type="steps">
         <steps>
           <step index="0">

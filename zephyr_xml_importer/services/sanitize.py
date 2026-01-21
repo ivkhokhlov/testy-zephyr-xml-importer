@@ -46,6 +46,7 @@ def sanitize_html(fragment: str | None) -> str:
 
     # Remove some invisible unicode chars (Word joiner etc.)
     s = s.replace("\u2060", "").replace("\ufeff", "")
+    s = s.replace("\xa0", " ")
 
     # Normalize line endings and collapse excessive blank lines
     s = s.replace("\r\n", "\n").replace("\r", "\n")

@@ -8,3 +8,4 @@ build/
 *.egg-info/
 .agent/logs/*.out
 .agent/logs/*.err
+tmp

@@ -2,7 +2,7 @@
 set -euo pipefail
 
 N="${1:-50}"
-SANDBOX="${SANDBOX:-workspace-write}"     # or danger-full-access
+SANDBOX="${SANDBOX:-danger-full-access}"     # or danger-full-access
 APPROVALS="${APPROVALS:-never}"
 
 mkdir -p .agent/logs scripts
@@ -19,10 +19,10 @@ for ((i=1; i<=N; i++)); do
   codex-proxy --search exec --cd . --sandbox "$SANDBOX" --output-last-message ".agent/last_planner.txt"     - < .agent/planner.md     > ".agent/logs/planner_${i}.out" 2> ".agent/logs/planner_${i}.err"
 
   echo "=== CYCLE $i / $N: WORKER ==="
-  codex-proxy exec --cd . --sandbox "$SANDBOX" --ask-for-approval "$APPROVALS" --output-last-message ".agent/last_worker.txt"     - < .agent/worker.md     > ".agent/logs/worker_${i}.out" 2> ".agent/logs/worker_${i}.err"
+  codex-proxy exec --cd . --sandbox "$SANDBOX" --output-last-message ".agent/last_worker.txt"     - < .agent/worker.md     > ".agent/logs/worker_${i}.out" 2> ".agent/logs/worker_${i}.err"
 
   echo "=== CYCLE $i / $N: JUDGE ==="
-  codex-proxy exec --cd . --sandbox "$SANDBOX" --ask-for-approval "$APPROVALS" --output-last-message ".agent/last_judge.txt"     - < .agent/judge.md     > ".agent/logs/judge_${i}.out" 2> ".agent/logs/judge_${i}.err"
+  codex-proxy exec --cd . --sandbox "$SANDBOX" --output-last-message ".agent/last_judge.txt"     - < .agent/judge.md     > ".agent/logs/judge_${i}.out" 2> ".agent/logs/judge_${i}.err"
 
   echo "--- tail progress ---"
   tail -n 25 .agent/progress.md || true

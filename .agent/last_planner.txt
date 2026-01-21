@@ -1,0 +1,12 @@
+Selected task: ZEP-100 — Importer integration via TestY services.  
+Acceptance: create-only skip by `attributes.zephyr.key`.  
+Updated plan in `.agent/plan.md` with adapter-based integration steps.  
+Appended planner entry to `.agent/progress.md` (CODEX_ITERATION=14).  
+Queue edits: none.  
+Worker: define a minimal TestY adapter/protocol and in-memory test adapter.  
+Worker: implement create-only import path with suite creation and duplicate skip.  
+Worker: wire non-dry-run path in `zephyr_xml_importer/api/views.py` to new importer.  
+Worker: add unit tests validating duplicate skip and report action `skipped`.  
+Worker: keep TestY imports behind conditional adapter to preserve unit-testability.  
+Worker: run `pytest -q` at the end; run `python -m ruff check .` if available.  
+End of planner run.

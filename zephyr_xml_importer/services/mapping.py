@@ -3,23 +3,66 @@ from __future__ import annotations
 from dataclasses import asdict
 from typing import Any
 
+from .attachments import AttachmentMatchResult, AttachmentZipIndex, match_attachments
 from .models import ZephyrTestCase, ZephyrStep
 from .sanitize import sanitize_html
+
+
+def _normalize_label(label: str) -> str:
+    return " ".join(label.split())
+
+
+def _normalized_labels(raw_labels: list[str]) -> list[str]:
+    normalized: list[str] = []
+    seen: set[str] = set()
+    for raw in raw_labels:
+        cleaned = _normalize_label(raw)
+        if not cleaned or cleaned in seen:
+            continue
+        seen.add(cleaned)
+        normalized.append(cleaned)
+    return normalized
+
+
+def _add_label(labels: list[str], seen: set[str], label: str | None) -> None:
+    if not label:
+        return
+    cleaned = _normalize_label(label)
+    if not cleaned or cleaned in seen:
+        return
+    seen.add(cleaned)
+    labels.append(cleaned)
+
+
+def _normalize_value(value: str | None) -> str | None:
+    if not value:
+        return None
+    cleaned = _normalize_label(value)
+    return cleaned or None
+
+
+def _build_step_scenario(step: ZephyrStep) -> str:
+    desc = sanitize_html(step.description)
+    test_data = sanitize_html(step.test_data)
+    if desc:
+        if test_data:
+            return f"{desc}\n\nTest data:\n{test_data}"
+        return desc
+    if test_data:
+        return f"Test data:\n{test_data}"
+    return f"Step {step.index + 1} (empty in Zephyr)"
 
 
 def flatten_steps_to_scenario(steps: list[ZephyrStep]) -> str:
     parts: list[str] = []
     for s in sorted(steps, key=lambda x: x.index):
-        desc = sanitize_html(s.description)
+        step_scenario = _build_step_scenario(s)
         exp = sanitize_html(s.expected_result)
-        td = sanitize_html(s.test_data)
 
         chunk = []
         chunk.append(f"Step {s.index + 1}")
-        if desc:
-            chunk.append(desc)
-        if td:
-            chunk.append(f"Test data:\n{td}")
+        if step_scenario:
+            chunk.append(step_scenario)
         if exp:
             chunk.append(f"Expected:\n{exp}")
         parts.append("\n".join(chunk).strip())
@@ -49,21 +92,28 @@ def build_testy_payload_from_zephyr(
     description = sanitize_html(tc.objective)
 
     # Steps-based default (Zephyr export commonly uses steps)
-    is_steps = True
-    scenario = flatten_steps_to_scenario(tc.steps)
+    is_steps = (tc.test_script_type or "").lower() == "steps" or bool(tc.steps)
+    if is_steps:
+        scenario = flatten_steps_to_scenario(tc.steps)
+    else:
+        scenario = sanitize_html(tc.test_script_text)
     if not scenario:
         # Required by TestY model: scenario must be non-empty
-        scenario = f"(Imported from Zephyr {zephyr_key or 'unknown'}; no steps content)"
+        scenario = f"(Imported from Zephyr {zephyr_key or 'unknown'}; no scenario content)"
 
-    labels = list(tc.labels)
+    labels = _normalized_labels(tc.labels)
+    seen_labels = set(labels)
 
     if meta_labels:
-        if tc.status:
-            labels.append(f"zephyr:status={tc.status}")
-        if tc.priority:
-            labels.append(f"zephyr:priority={tc.priority}")
-        if tc.owner:
-            labels.append(f"zephyr:owner={tc.owner}")
+        status = _normalize_value(tc.status)
+        priority = _normalize_value(tc.priority)
+        owner = _normalize_value(tc.owner)
+        if status:
+            _add_label(labels, seen_labels, f"zephyr:status={status}")
+        if priority:
+            _add_label(labels, seen_labels, f"zephyr:priority={priority}")
+        if owner:
+            _add_label(labels, seen_labels, f"zephyr:owner={owner}")
 
     attributes = {
         "zephyr": {
@@ -99,9 +149,16 @@ def build_testy_payload_from_zephyr(
             {
                 "sort_order": s.index,
                 "name": f"Step {s.index + 1}",
-                "scenario": sanitize_html(s.description) or f"Step {s.index + 1} (empty in Zephyr)",
+                "scenario": _build_step_scenario(s),
                 "expected": sanitize_html(s.expected_result),
             }
             for s in sorted(tc.steps, key=lambda x: x.index)
         ],
     }
+
+
+def match_attachments_for_testcase(
+    tc: ZephyrTestCase,
+    zip_index: AttachmentZipIndex | None,
+) -> AttachmentMatchResult:
+    return match_attachments(tc.attachments, zip_index)

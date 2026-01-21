@@ -52,4 +52,3 @@ Early iterations should focus on:
 2) HTML→text sanitizer (deterministic)
 3) Mapping logic and validations (no empty scenarios)
 Only then implement TestY/DRF integration.
-

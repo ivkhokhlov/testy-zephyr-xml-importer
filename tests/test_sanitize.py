@@ -11,3 +11,7 @@ def test_sanitize_list_items():
 
 def test_sanitize_table_cells():
     assert sanitize_html("<table><tr><td>A</td><td>B</td></tr></table>") == "A\tB"
+
+
+def test_sanitize_unescape_entities():
+    assert sanitize_html("A&nbsp;B &amp; C") == "A B & C"

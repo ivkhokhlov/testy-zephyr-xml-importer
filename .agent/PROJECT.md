@@ -46,3 +46,4 @@ JUDGE_MAX_MINUTES: 3
 ## Optional notes
 - Keep TestY-specific imports behind adapters so unit tests can run without TestY installed.
 - Prefer deterministic HTML sanitization (no heavy HTML parser dependency unless truly needed).
+- Exapmle of Zepyr import .xml file tmp/zephyr-scale-tests-export288313852528022991.xml

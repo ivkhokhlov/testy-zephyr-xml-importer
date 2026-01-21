@@ -1,0 +1,12 @@
+Implemented TestY adapter layer with service-backed and in-memory implementations to isolate TestY imports.
+Implemented real import path in `zephyr_xml_importer/services/importer.py` with suite creation, duplicate skip, labels/attachments, and report rows.
+Wired non-dry-run API path to importer in `zephyr_xml_importer/api/views.py` with adapter error handling.
+Added skip-on-duplicate test using in-memory adapter in `tests/test_importer_integration.py`.
+Tests: `pytest -q` passed.
+Lint: `python -m ruff check .` failed (ruff not installed).
+Worker report: `.agent/worker_report.md`.
+Test log: `.agent/logs/test_14.log`.
+Lint log: `.agent/logs/lint_14.log`.
+Key file: `zephyr_xml_importer/services/testy_adapter.py`.
+Key file: `zephyr_xml_importer/services/importer.py`.
+Key file: `zephyr_xml_importer/api/views.py`.
