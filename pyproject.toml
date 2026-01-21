@@ -1,0 +1,23 @@
+[project]
+name = "testy-zephyr-xml-importer"
+version = "0.1.0"
+description = "TestY plugin: import Zephyr Scale XML export into TestY"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+  "defusedxml>=0.7.1",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.0.0",
+  "ruff>=0.5.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"

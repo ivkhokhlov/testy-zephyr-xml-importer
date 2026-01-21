@@ -1,0 +1,45 @@
+<project>
+  <folders>
+    <folder fullPath="ui/Blacklists" index="123" />
+    <folder fullPath="api/data_profiles" index="200" />
+  </folders>
+
+  <testCases>
+    <testCase id="401225" key="ES-T560">
+      <name><![CDATA[Login works]]></name>
+      <folder><![CDATA[ui/Blacklists]]></folder>
+      <objective><![CDATA[<p>Goal<br/>Line2</p>]]></objective>
+      <precondition><![CDATA[<ul><li>User exists</li></ul>]]></precondition>
+      <status>Approved</status>
+      <priority>Normal</priority>
+      <owner>JIRAUSER53027</owner>
+      <labels>
+        <label><![CDATA[b2b]]></label>
+        <label><![CDATA[ smoke  ]]></label>
+      </labels>
+      <issues>
+        <issue>
+          <key>ES-7574</key>
+          <summary><![CDATA[Something]]></summary>
+        </issue>
+      </issues>
+      <attachments>
+        <attachment><name>file1.csv</name></attachment>
+        <attachment><name>file2.xlsx</name></attachment>
+      </attachments>
+      <testScript type="steps">
+        <steps>
+          <step index="0">
+            <description><![CDATA[Open login page]]></description>
+            <expectedResult><![CDATA[Page opens]]></expectedResult>
+          </step>
+          <step index="1">
+            <description><![CDATA[]]></description>
+            <expectedResult><![CDATA[]]></expectedResult>
+            <testData><![CDATA[user=admin]]></testData>
+          </step>
+        </steps>
+      </testScript>
+    </testCase>
+  </testCases>
+</project>
