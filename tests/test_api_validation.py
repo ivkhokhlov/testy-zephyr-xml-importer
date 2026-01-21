@@ -59,5 +59,10 @@ def test_handle_import_request_dry_run_response():
         "steps": 2,
         "labels": 5,
         "attachments": 2,
+        "created": 1,
+        "reused": 0,
+        "updated": 0,
+        "skipped": 0,
+        "failed": 0,
     }
-    assert "ES-T560" in response["report"]
+    assert "ES-T560" in response["report_csv"]

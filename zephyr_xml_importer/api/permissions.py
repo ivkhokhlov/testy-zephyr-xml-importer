@@ -37,13 +37,6 @@ def _extract_role_name(value: Any) -> str | None:
 
 
 def _iter_role_names(user: Any) -> Iterable[str]:
-    role_name = _extract_role_name(getattr(user, "role_name", None))
-    if role_name:
-        yield role_name
-    role = _extract_role_name(getattr(user, "role", None))
-    if role:
-        yield role
-
     membership = getattr(user, "membership", None)
     if membership is not None:
         member_role = _extract_role_name(getattr(membership, "role", None))
@@ -64,17 +57,6 @@ def _iter_role_names(user: Any) -> Iterable[str]:
                 if member_role_name:
                     yield member_role_name
         except TypeError:
-            pass
-
-    groups = getattr(user, "groups", None)
-    if groups is not None:
-        try:
-            iterable = groups.all() if hasattr(groups, "all") else groups
-            for group in iterable:
-                group_name = _extract_role_name(getattr(group, "name", None))
-                if group_name:
-                    yield group_name
-        except Exception:
             pass
 
 

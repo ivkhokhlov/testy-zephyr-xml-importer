@@ -49,8 +49,13 @@ def _build_response_from_result(result: DryRunImportResult, *, dry_run: bool) ->
             "steps": result.summary.steps,
             "labels": result.summary.labels,
             "attachments": result.summary.attachments,
+            "created": result.summary.created,
+            "reused": result.summary.reused,
+            "updated": result.summary.updated,
+            "skipped": result.summary.skipped,
+            "failed": result.summary.failed,
         },
-        "report": result.report_csv,
+        "report_csv": result.report_csv,
         "warnings": result.warnings,
     }
 

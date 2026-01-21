@@ -3,6 +3,5 @@
 Verdict: PASS
 
 Notes:
-- `pytest -q` passes when re-run by Judge.
-- ZEP-100 acceptance met: create-only skips duplicates by `attributes.zephyr.key`.
-- Lint remains optional; `ruff` is not installed here.
+- `pytest -q` re-run by Judge passed.
+- ZEP-170 acceptance met: admin access limited to superuser or membership role name.

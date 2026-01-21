@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-from dataclasses import asdict
+from dataclasses import asdict, is_dataclass
 from typing import Any
 
 from .attachments import AttachmentMatchResult, AttachmentZipIndex, match_attachments
-from .models import ZephyrTestCase, ZephyrStep
+from .models import ZephyrIssue, ZephyrTestCase, ZephyrStep, ZephyrTestDataTable
 from .sanitize import sanitize_html
 
 
@@ -39,6 +39,88 @@ def _normalize_value(value: str | None) -> str | None:
         return None
     cleaned = _normalize_label(value)
     return cleaned or None
+
+
+def _clean_items(items: list[str]) -> list[str]:
+    cleaned: list[str] = []
+    for item in items:
+        if not item:
+            continue
+        value = " ".join(item.split())
+        if value:
+            cleaned.append(value)
+    return cleaned
+
+
+def _issue_keys(issues: list[ZephyrIssue]) -> list[str]:
+    keys: list[str] = []
+    for issue in issues:
+        key = (issue.key or "").strip()
+        if key:
+            keys.append(key)
+    return keys
+
+
+def _format_test_data_wrapper(wrapper: ZephyrTestDataTable) -> str:
+    rows: list[str] = []
+    for row_index, row in enumerate(wrapper.rows, start=1):
+        cells: list[str] = []
+        for cell in row.cells:
+            name = sanitize_html(cell.name)
+            value = sanitize_html(cell.value)
+            data_type = sanitize_html(cell.data_type)
+            if name and value:
+                cells.append(f"{name}={value}")
+            elif name:
+                cells.append(name)
+            elif value:
+                cells.append(value)
+            elif data_type:
+                cells.append(data_type)
+        if cells:
+            rows.append(f"Row {row_index}: " + "; ".join(cells))
+    if not rows:
+        return ""
+    return "Test data rows:\n" + "\n".join(rows)
+
+
+def _json_safe_test_data_wrapper(wrapper: ZephyrTestDataTable | None) -> Any:
+    if wrapper is None:
+        return None
+    if is_dataclass(wrapper):
+        return asdict(wrapper)
+    return wrapper
+
+
+def _build_description(
+    tc: ZephyrTestCase,
+    *,
+    append_jira_issues_to_description: bool,
+    embed_testdata_to_description: bool,
+) -> str:
+    parts: list[str] = []
+    base = sanitize_html(tc.objective)
+    if base:
+        parts.append(base)
+
+    if append_jira_issues_to_description:
+        issue_keys = _issue_keys(tc.issues)
+        if issue_keys:
+            parts.append(f"Jira: {', '.join(issue_keys)}")
+        attachments = _clean_items(tc.attachments)
+        if attachments:
+            parts.append(f"Attachments: {', '.join(attachments)}")
+
+    if embed_testdata_to_description:
+        parameters = _clean_items(tc.parameters)
+        if parameters:
+            parts.append(f"Parameters: {', '.join(parameters)}")
+        if tc.test_data_wrapper:
+            table_block = _format_test_data_wrapper(tc.test_data_wrapper)
+            if table_block:
+                parts.append(table_block)
+
+    return "\n\n".join(parts).strip()
 
 
 def _build_step_scenario(step: ZephyrStep) -> str:
@@ -89,7 +171,11 @@ def build_testy_payload_from_zephyr(
         name = f"[{zephyr_key}] {name}"
 
     setup = sanitize_html(tc.precondition)
-    description = sanitize_html(tc.objective)
+    description = _build_description(
+        tc,
+        append_jira_issues_to_description=append_jira_issues_to_description,
+        embed_testdata_to_description=embed_testdata_to_description,
+    )
 
     # Steps-based default (Zephyr export commonly uses steps)
     is_steps = (tc.test_script_type or "").lower() == "steps" or bool(tc.steps)
@@ -131,7 +217,7 @@ def build_testy_payload_from_zephyr(
             "attachments": list(tc.attachments),
             "paramType": tc.param_type,
             "parameters": list(tc.parameters),
-            "testDataWrapper": tc.test_data_wrapper,
+            "testDataWrapper": _json_safe_test_data_wrapper(tc.test_data_wrapper),
         }
     }
 

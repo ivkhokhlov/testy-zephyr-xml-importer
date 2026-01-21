@@ -6,8 +6,17 @@
 ## Next
 
 ## Later
+ 
 
 ## Done
+- [x] ZEP-170 — Admin role check: restrict to TestY membership role if required
+- [x] ZEP-160 — Dry-run validations: warn on missing folder, empty expected, cap warning preview
+- [x] ZEP-150 — Packaging: add [build-system] to pyproject.toml for pip install reliability
+- [x] ZEP-140 — XML streaming: avoid full XML in RAM, reduce passes
+- [x] ZEP-130 — Suite tree from <folders>: create empty folders before case import
+- [x] ZEP-120 — API response contract: summary created/reused/updated/skipped/failed + report_csv/report_url key
+- [x] Fix pyproject.toml scope creep: remove Poetry/build-system block or align to spec (Python 3.11)
+- [x] ZEP-110 — Mapping fixes: JSON-safe testDataWrapper, description embeds (issues/testdata/attachments), strip labels from create payload
 - [x] ZEP-100 — Importer integration via TestY services (acceptance: create-only skip by attributes.zephyr.key)
 - [x] ZEP-090 — Dry-run validations + warnings preview (acceptance: detects empty steps, long names, dup keys)
 - [x] ZEP-080 — Pluggy hook + TestyPluginConfig + entry point metadata (acceptance: package exposes entrypoint group "testy")

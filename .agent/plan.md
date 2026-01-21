@@ -1,29 +1,24 @@
-# Plan (written by Planner each cycle)
+# Plan
 
-Task: ZEP-100 — Importer integration via TestY services
+Task: ZEP-170 — Admin role check: restrict to TestY membership role if required
 
 Acceptance criteria:
-- create-only skip by attributes.zephyr.key
+- ZEP-170 — Admin role check: restrict to TestY membership role if required
 
 Assumptions:
-- A small adapter layer can hide TestY imports so unit tests run without TestY installed.
-- TestY services follow the names referenced in spec_full_ru (TestSuiteService/TestCaseService).
+- TestY exposes a project membership via `request.user.membership` or `request.user.memberships`, each with `role`/`role_name`.
 
 Micro-steps:
-- Review current dry-run flow in `zephyr_xml_importer/services/importer.py` and DRF view handling to locate integration points for real import.
-- Define a minimal TestY adapter/protocol for suite creation, case lookup by `attributes.zephyr.key`, case creation with steps, label attachment, and file attachment.
-- Implement a real TestY adapter with conditional imports (raise a clear runtime error if TestY is unavailable).
-- Implement a create-only import path that builds suites from folder paths, skips duplicates via adapter lookup, creates cases + steps, and records report rows/summaries.
-- Wire the non-dry-run API path to the new importer and return summary/report consistently with dry-run.
-- Add unit tests using an in-memory adapter to validate skip-on-duplicate behavior and report actions.
-- Run tests (and optional lint if available).
+- Review security requirement in `docs/spec.md` and current permission logic in `zephyr_xml_importer/api/permissions.py`.
+- Narrow role checks to membership role names only (plus `is_superuser`) to avoid over-permissive access.
+- Keep `ADMIN_ROLE_NAME` fallback to "Admin" when settings are absent.
+- Add/update unit tests to cover membership role allow and non-membership role deny cases.
+- Run tests (and optional lint) to confirm behavior.
 
 Files expected to change:
-- zephyr_xml_importer/services/importer.py
-- zephyr_xml_importer/services (new adapter module)
-- zephyr_xml_importer/api/views.py
-- tests (new/updated importer integration tests)
+- zephyr_xml_importer/api/permissions.py
+- tests/test_permissions.py
 
 Verification steps:
-- Run pytest -q.
-- If available, run python -m ruff check .
+- pytest -q
+- python -m ruff check .

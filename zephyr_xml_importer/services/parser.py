@@ -59,6 +59,40 @@ def parse_folders(source: str | Path | BinaryIO | bytes) -> dict[str, ZephyrFold
             f.close()
 
 
+def parse_folders_and_duplicate_key_counts(
+    source: str | Path | BinaryIO | bytes,
+) -> tuple[dict[str, ZephyrFolder], dict[str, int]]:
+    """
+    Parse `<folders>` and count `<testCase key="...">` in a single streaming pass.
+    """
+    folders: dict[str, ZephyrFolder] = {}
+    duplicate_key_counts: dict[str, int] = {}
+    f = _open_binary(source)
+    close_me = isinstance(source, (str, Path))
+    try:
+        for event, elem in DefusedET.iterparse(f, events=("end",)):
+            if elem.tag == "folder":
+                full_path = (elem.attrib.get("fullPath") or "").strip()
+                index_raw = elem.attrib.get("index")
+                idx = None
+                if index_raw is not None:
+                    try:
+                        idx = int(index_raw)
+                    except ValueError:
+                        idx = None
+                if full_path:
+                    folders[full_path] = ZephyrFolder(full_path=full_path, index=idx)
+            elif elem.tag == "testCase":
+                key = (elem.attrib.get("key") or "").strip()
+                if key:
+                    duplicate_key_counts[key] = duplicate_key_counts.get(key, 0) + 1
+            elem.clear()
+        return folders, duplicate_key_counts
+    finally:
+        if close_me:
+            f.close()
+
+
 def iter_test_cases(source: str | Path | BinaryIO | bytes) -> Iterator[ZephyrTestCase]:
     """
     Yield ZephyrTestCase objects streaming from `<testCases>`.
