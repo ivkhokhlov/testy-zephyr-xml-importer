@@ -3,6 +3,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from io import BytesIO
 import importlib
+import mimetypes
+import os
 from typing import Any, Mapping, Sequence
 
 
@@ -74,6 +76,77 @@ def _resolve_model(class_name: str, module_candidates: Sequence[str]) -> type | 
     return None
 
 
+PROJECT_MODEL_CANDIDATES = (
+    "testy.core.models",
+    "testy.models",
+    "testy.projects.models",
+    "testy.projects.models.project",
+    "testy.projects.project",
+    "testy.projects",
+    "testy.apps.projects.models",
+    "testy.apps.projects",
+)
+
+SUITE_MODEL_CANDIDATES = (
+    "testy.tests_description.models",
+    "testy.models",
+    "testy.suites.models",
+)
+
+CASE_MODEL_CANDIDATES = (
+    "testy.tests_description.models",
+    "testy.models",
+    "testy.cases.models",
+)
+
+ATTACHMENT_MODEL_CANDIDATES = (
+    "testy.core.models",
+    "testy.models",
+)
+
+
+def _resolve_project_model_via_django() -> type | None:
+    try:
+        from django.apps import apps  # pragma: no cover - depends on Django runtime
+    except Exception:
+        return None
+    for app_label in ("core", "projects", "project", "testy_projects"):
+        try:
+            model = apps.get_model(app_label, "Project")
+        except Exception:
+            model = None
+        if model is not None:
+            return model
+    try:
+        candidates: list[tuple[str, str, type]] = []
+        for model in apps.get_models():
+            if getattr(model, "__name__", "") != "Project":
+                continue
+            module = getattr(model, "__module__", "") or ""
+            app_label = getattr(getattr(model, "_meta", None), "app_label", "") or ""
+            if module.startswith("testy.") or app_label.lower() in {"projects", "project"}:
+                candidates.append((module, app_label, model))
+        if candidates:
+            candidates.sort(
+                key=lambda item: (
+                    0 if item[0].startswith("testy.") else 1,
+                    0 if item[1].lower() in {"projects", "project"} else 1,
+                    item[0],
+                )
+            )
+            return candidates[0][2]
+    except Exception:  # pragma: no cover - depends on Django runtime
+        return None
+    return None
+
+
+def _resolve_project_model() -> type | None:
+    model = _resolve_model("Project", PROJECT_MODEL_CANDIDATES)
+    if model is not None:
+        return model
+    return _resolve_project_model_via_django()
+
+
 @dataclass(frozen=True, slots=True)
 class ProjectChoice:
     id: int
@@ -81,7 +154,7 @@ class ProjectChoice:
 
 
 def load_project_choices() -> tuple[list[ProjectChoice] | None, str | None]:
-    model = _resolve_model("Project", ("testy.models", "testy.projects.models"))
+    model = _resolve_project_model()
     if model is None:
         return None, "Project model is not available"
     manager = getattr(model, "objects", None)
@@ -121,11 +194,12 @@ def load_project_choices() -> tuple[list[ProjectChoice] | None, str | None]:
 
 
 class TestyServiceAdapter(BaseTestyAdapter):
-    def __init__(self) -> None:
+    def __init__(self, user: Any | None = None) -> None:
         try:
             suite_service_cls = _resolve_class(
                 "TestSuiteService",
                 (
+                    "testy.tests_description.services.suites",
                     "testy.services",
                     "testy.services.suites",
                     "testy.services.test_suites",
@@ -134,6 +208,7 @@ class TestyServiceAdapter(BaseTestyAdapter):
             case_service_cls = _resolve_class(
                 "TestCaseService",
                 (
+                    "testy.tests_description.services.cases",
                     "testy.services",
                     "testy.services.cases",
                     "testy.services.test_cases",
@@ -141,11 +216,11 @@ class TestyServiceAdapter(BaseTestyAdapter):
             )
             label_service_cls = _resolve_class(
                 "LabelService",
-                ("testy.services", "testy.services.labels"),
+                ("testy.core.services.labels", "testy.services", "testy.services.labels"),
             )
             attachment_service_cls = _resolve_class(
                 "AttachmentService",
-                ("testy.services", "testy.services.attachments"),
+                ("testy.core.services.attachments", "testy.services", "testy.services.attachments"),
             )
         except Exception as exc:  # pragma: no cover - depends on TestY runtime
             raise TestyAdapterError(
@@ -156,14 +231,11 @@ class TestyServiceAdapter(BaseTestyAdapter):
         self._case_service = case_service_cls()
         self._label_service = label_service_cls()
         self._attachment_service = attachment_service_cls()
-        self._suite_model = _resolve_model(
-            "TestSuite",
-            ("testy.models", "testy.suites.models"),
-        )
-        self._case_model = _resolve_model(
-            "TestCase",
-            ("testy.models", "testy.cases.models"),
-        )
+        self._suite_model = _resolve_model("TestSuite", SUITE_MODEL_CANDIDATES)
+        self._case_model = _resolve_model("TestCase", CASE_MODEL_CANDIDATES)
+        self._project_model = _resolve_project_model()
+        self._attachment_model = _resolve_model("Attachment", ATTACHMENT_MODEL_CANDIDATES)
+        self._user = user
 
     def get_suite_id(self, project_id: int, name: str, parent_id: int | None) -> int | None:
         if self._suite_model is None:  # pragma: no cover - requires TestY
@@ -179,6 +251,29 @@ class TestyServiceAdapter(BaseTestyAdapter):
         )
         return existing.id if existing else None
 
+    def _get_project(self, project_id: int):
+        if self._project_model is None:  # pragma: no cover - requires TestY
+            raise TestyAdapterError("Project model is not available")
+        return self._project_model.objects.get(id=project_id)
+
+    def _get_suite(self, suite_id: int):
+        if self._suite_model is None:  # pragma: no cover - requires TestY
+            raise TestyAdapterError("TestSuite model is not available")
+        return self._suite_model.objects.get(id=suite_id)
+
+    def _get_case(self, case_id: int):
+        if self._case_model is None:  # pragma: no cover - requires TestY
+            raise TestyAdapterError("TestCase model is not available")
+        return self._case_model.objects.get(id=case_id)
+
+    def _labels_payload(self, labels: Sequence[str]) -> list[dict[str, Any]]:
+        payload: list[dict[str, Any]] = []
+        for label in labels:
+            cleaned = str(label).strip()
+            if cleaned:
+                payload.append({"name": cleaned})
+        return payload
+
     def create_suite(
         self,
         project_id: int,
@@ -186,14 +281,16 @@ class TestyServiceAdapter(BaseTestyAdapter):
         parent_id: int | None,
         attributes: Mapping[str, Any] | None,
     ) -> int:
+        project = self._get_project(project_id)
+        parent = self._get_suite(parent_id) if parent_id is not None else None
         payload = {
-            "project_id": project_id,
+            "project": project,
+            "parent": parent,
             "name": name,
-            "parent_id": parent_id,
             "description": "",
             "attributes": dict(attributes or {}),
         }
-        suite = self._suite_service.suite_create(**payload)
+        suite = self._suite_service.suite_create(payload)
         suite_id = getattr(suite, "id", None)
         if suite_id is None:  # pragma: no cover - depends on TestY runtime
             raise TestyAdapterError("TestSuiteService.suite_create did not return an id")
@@ -218,9 +315,11 @@ class TestyServiceAdapter(BaseTestyAdapter):
         suite_id: int,
         payload: Mapping[str, Any],
     ) -> int:
+        project = self._get_project(project_id)
+        suite = self._get_suite(suite_id)
         data = dict(payload)
-        data.update({"project_id": project_id, "suite_id": suite_id})
-        case = self._case_service.case_with_steps_create(**data)
+        data.update({"project": project, "suite": suite, "user": self._user})
+        case = self._case_service.case_with_steps_create(data)
         case_id = getattr(case, "id", None)
         if case_id is None:  # pragma: no cover - depends on TestY runtime
             raise TestyAdapterError("TestCaseService.case_with_steps_create did not return an id")
@@ -233,9 +332,12 @@ class TestyServiceAdapter(BaseTestyAdapter):
         suite_id: int,
         payload: Mapping[str, Any],
     ) -> int:
+        project = self._get_project(project_id)
+        suite = self._get_suite(suite_id)
+        case_obj = self._get_case(case_id)
         data = dict(payload)
-        data.update({"project_id": project_id, "suite_id": suite_id, "case_id": case_id})
-        case = self._case_service.case_with_steps_update(**data)
+        data.update({"project": project, "suite": suite, "user": self._user})
+        case = self._case_service.case_with_steps_update(case_obj, data)
         updated_id = getattr(case, "id", None)
         if updated_id is None:  # pragma: no cover - depends on TestY runtime
             raise TestyAdapterError("TestCaseService.case_with_steps_update did not return an id")
@@ -247,30 +349,41 @@ class TestyServiceAdapter(BaseTestyAdapter):
         if self._case_model is None:  # pragma: no cover - requires TestY
             raise TestyAdapterError("TestCase model is not available for label assignment")
         case_obj = self._case_model.objects.get(id=case_id)
-        try:
-            self._label_service.set(case_obj, labels, project_id=project_id)
-        except TypeError:  # pragma: no cover - depends on TestY runtime
-            self._label_service.set(case_obj, labels)
-        return len(labels)
+        label_payload = self._labels_payload(labels)
+        if not label_payload:
+            return 0
+        self._label_service.set(label_payload, case_obj, self._user)
+        return len(label_payload)
 
     def attach_file(self, project_id: int, case_id: int, filename: str, content: bytes) -> None:
         if self._case_model is None:  # pragma: no cover - requires TestY
             raise TestyAdapterError("TestCase model is not available for attachments")
+        if self._attachment_model is None:  # pragma: no cover - requires TestY
+            raise TestyAdapterError("Attachment model is not available for attachments")
         case_obj = self._case_model.objects.get(id=case_id)
+        project = case_obj.project
         try:
             from django.core.files.base import ContentFile  # pragma: no cover - depends on TestY runtime
-        except Exception:  # pragma: no cover - depends on TestY runtime
-            ContentFile = None  # type: ignore[assignment]
-        file_obj = ContentFile(content, name=filename) if ContentFile else BytesIO(content)
-        try:
-            self._attachment_service.attachment_set_content_object(
-                case_obj,
-                file_obj,
-                filename=filename,
-                project_id=project_id,
-            )
-        except TypeError:  # pragma: no cover - depends on TestY runtime
-            self._attachment_service.attachment_set_content_object(case_obj, file_obj)
+        except Exception as exc:  # pragma: no cover - depends on TestY runtime
+            raise TestyAdapterError("Django ContentFile is not available") from exc
+
+        name_root, _ = os.path.splitext(filename)
+        mime_type, _ = mimetypes.guess_type(filename)
+        attachment_data = {
+            "project": project,
+            "name": name_root or filename,
+            "filename": filename,
+            "file_extension": mime_type or "application/octet-stream",
+            "size": len(content),
+            "user": self._user,
+            "comment": "",
+            "file": ContentFile(content, name=filename),
+        }
+        attachment = self._attachment_model.model_create(
+            fields=self._attachment_service.non_side_effect_fields,
+            data=attachment_data,
+        )
+        self._attachment_service.attachment_set_content_object(attachment, case_obj)
 
 
 @dataclass(slots=True)

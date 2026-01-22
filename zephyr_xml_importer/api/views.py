@@ -16,10 +16,12 @@ try:
     from rest_framework.response import Response
     from rest_framework.views import APIView
     from rest_framework import status as drf_status
+    from rest_framework.exceptions import ValidationError as DrfValidationError
 except Exception:  # pragma: no cover - DRF optional for unit tests
     Response = None
     APIView = object
     drf_status = None
+    DrfValidationError = None
 
 try:
     from .serializers import ImportRequestSerializer
@@ -27,21 +29,68 @@ except Exception:  # pragma: no cover
     ImportRequestSerializer = None
 
 
+def _normalize_value(value: Any) -> Any:
+    if isinstance(value, (list, tuple)):
+        if not value:
+            return None
+        return value[0]
+    return value
+
+
+def _merge_mapping(target: dict[str, Any], source: Any) -> None:
+    if source is None:
+        return
+    if hasattr(source, "lists"):
+        try:
+            for key, values in source.lists():
+                target[key] = _normalize_value(values)
+            return
+        except Exception:
+            pass
+    if hasattr(source, "items"):
+        try:
+            for key, value in source.items():
+                target[key] = _normalize_value(value)
+            return
+        except Exception:
+            pass
+    try:
+        for key, value in dict(source).items():
+            target[key] = _normalize_value(value)
+    except Exception:
+        return
+
+
 def _extract_payload(request: Any) -> dict[str, Any]:
     payload: dict[str, Any] = {}
     data = getattr(request, "data", None)
-    if data is not None:
-        try:
-            payload.update(data)
-        except Exception:
-            payload.update(dict(data))
+    if data is None:
+        data = getattr(request, "POST", None)
+    _merge_mapping(payload, data)
     files = getattr(request, "FILES", None)
-    if files is not None:
-        try:
-            payload.update(files)
-        except Exception:
-            pass
+    _merge_mapping(payload, files)
     return payload
+
+
+def _coerce_bool(value: Any) -> bool:
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, int) and value in (0, 1):
+        return bool(value)
+    if isinstance(value, str):
+        return value.strip().lower() in {"true", "1", "yes", "y", "on"}
+    return False
+
+
+def _error_response(errors: Any, payload: Mapping[str, Any]) -> Any:
+    response = {
+        "status": "failed",
+        "errors": errors,
+        "dry_run": _coerce_bool(payload.get("dry_run")),
+    }
+    if Response is None:
+        return response
+    return Response(response, status=drf_status.HTTP_400_BAD_REQUEST)
 
 
 def _build_response_from_result(result: DryRunImportResult, *, dry_run: bool) -> dict[str, Any]:
@@ -65,7 +114,7 @@ def _build_response_from_result(result: DryRunImportResult, *, dry_run: bool) ->
     }
 
 
-def build_import_response(request_data: ImportRequestData) -> dict[str, Any]:
+def build_import_response(request_data: ImportRequestData, *, user: Any | None = None) -> dict[str, Any]:
     try:
         if request_data.dry_run:
             result = dry_run_import(
@@ -86,6 +135,7 @@ def build_import_response(request_data: ImportRequestData) -> dict[str, Any]:
                 append_jira_issues_to_description=request_data.append_jira_issues_to_description,
                 embed_testdata_to_description=request_data.embed_testdata_to_description,
                 on_duplicate=request_data.on_duplicate,
+                user=user,
             )
         return _build_response_from_result(result, dry_run=request_data.dry_run)
     except TestyAdapterError as exc:
@@ -134,25 +184,13 @@ class ImportView(APIView):  # type: ignore[misc]
             else:
                 request_data = validate_import_request(payload)
         except ImportValidationError as exc:
-            response = {
-                "status": "failed",
-                "errors": exc.errors,
-                "dry_run": bool(payload.get("dry_run")),
-            }
-            if Response is None:
-                return response
-            return Response(response, status=drf_status.HTTP_400_BAD_REQUEST)
+            return _error_response(exc.errors, payload)
         except Exception as exc:
-            response = {
-                "status": "failed",
-                "errors": {"detail": str(exc)},
-                "dry_run": bool(payload.get("dry_run")),
-            }
-            if Response is None:
-                return response
-            return Response(response, status=drf_status.HTTP_400_BAD_REQUEST)
+            if DrfValidationError is not None and isinstance(exc, DrfValidationError):
+                return _error_response(exc.detail, payload)
+            return _error_response({"detail": str(exc)}, payload)
 
-        response_data = build_import_response(request_data)
+        response_data = build_import_response(request_data, user=getattr(request, "user", None))
         if Response is None:
             return response_data
         status_code = (

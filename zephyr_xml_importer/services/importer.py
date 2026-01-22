@@ -232,13 +232,14 @@ def import_into_testy(
     embed_testdata_to_description: bool = True,
     on_duplicate: str = "skip",
     adapter: BaseTestyAdapter | None = None,
+    user: Any | None = None,
 ) -> DryRunImportResult:
     zip_bytes = _read_source_bytes(attachments_zip) if attachments_zip is not None else None
     zip_index = build_zip_index(zip_bytes) if zip_bytes is not None else None
     zip_archive = ZipFile(BytesIO(zip_bytes)) if zip_bytes is not None else None
 
     if adapter is None:
-        adapter = TestyServiceAdapter()
+        adapter = TestyServiceAdapter(user=user)
 
     rows: list[ReportRow] = []
     warnings: list[str] = []
