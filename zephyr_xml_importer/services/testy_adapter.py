@@ -74,6 +74,52 @@ def _resolve_model(class_name: str, module_candidates: Sequence[str]) -> type | 
     return None
 
 
+@dataclass(frozen=True, slots=True)
+class ProjectChoice:
+    id: int
+    name: str
+
+
+def load_project_choices() -> tuple[list[ProjectChoice] | None, str | None]:
+    model = _resolve_model("Project", ("testy.models", "testy.projects.models"))
+    if model is None:
+        return None, "Project model is not available"
+    manager = getattr(model, "objects", None)
+    if manager is None:
+        return None, "Project model has no manager"
+    try:
+        queryset = manager.all()
+    except Exception as exc:  # pragma: no cover - depends on TestY runtime
+        return None, f"Unable to load projects: {exc}"
+    try:
+        queryset = queryset.order_by("name", "id")
+    except Exception:
+        pass
+    try:
+        items = list(queryset)
+    except Exception as exc:  # pragma: no cover - depends on TestY runtime
+        return None, f"Unable to iterate projects: {exc}"
+
+    projects: list[ProjectChoice] = []
+    for item in items:
+        try:
+            project_id = int(getattr(item, "id"))
+        except Exception:
+            continue
+        name = getattr(item, "name", None)
+        if name is None:
+            name = getattr(item, "title", None)
+        if name is None:
+            name = str(project_id)
+        projects.append(ProjectChoice(id=project_id, name=str(name)))
+
+    if not projects:
+        return None, "No projects available"
+
+    projects.sort(key=lambda project: (project.name.casefold(), project.id))
+    return projects, None
+
+
 class TestyServiceAdapter(BaseTestyAdapter):
     def __init__(self) -> None:
         try:

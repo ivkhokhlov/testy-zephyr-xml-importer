@@ -1,16 +1,18 @@
-Task: ZEP-170 — Admin role check: restrict to TestY membership role if required
+Task: Implement UI for Zephyr XML Importer (native HTML page)
 
 What changed:
-- Limited admin-role checks to membership roles only (plus superuser).
-- Added unit tests covering membership role allow and non-membership role deny paths.
+- added project list loader with safe fallback when TestY models are unavailable
+- served HTML UI from GET handler with project list context
+- added self-contained template with form, JS fetch + CSRF, summary/warnings rendering, and CSV download
+- packaged templates in pyproject for distribution
+- added unit tests for project list helper
 
 Files changed:
-- zephyr_xml_importer/api/permissions.py
-- tests/test_permissions.py
+- zephyr_xml_importer/services/testy_adapter.py
+- zephyr_xml_importer/api/views.py
+- zephyr_xml_importer/templates/zephyr_xml_importer/import.html
+- pyproject.toml
+- tests/test_projects_ui.py
 
-Commands run:
+Commands run + results:
 - pytest -q (pass)
-- python -m ruff check . (fail: No module named ruff)
-
-Failures:
-- Lint failed because ruff is not installed in the environment.

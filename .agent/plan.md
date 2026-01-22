@@ -1,24 +1,12 @@
 # Plan
 
-Task: ZEP-170 — Admin role check: restrict to TestY membership role if required
+Task: Implement UI for Zephyr XML Importer (native HTML page).
 
-Acceptance criteria:
-- ZEP-170 — Admin role check: restrict to TestY membership role if required
+Steps:
+- Add project list loader with safe fallback for missing TestY models.
+- Serve HTML template from GET /plugins/zephyr-xml-importer/import/.
+- Build self-contained template with form, JS fetch, CSRF header, and result rendering.
+- Ensure templates are packaged in distribution.
+- Add unit tests for project list helper and run pytest.
 
-Assumptions:
-- TestY exposes a project membership via `request.user.membership` or `request.user.memberships`, each with `role`/`role_name`.
-
-Micro-steps:
-- Review security requirement in `docs/spec.md` and current permission logic in `zephyr_xml_importer/api/permissions.py`.
-- Narrow role checks to membership role names only (plus `is_superuser`) to avoid over-permissive access.
-- Keep `ADMIN_ROLE_NAME` fallback to "Admin" when settings are absent.
-- Add/update unit tests to cover membership role allow and non-membership role deny cases.
-- Run tests (and optional lint) to confirm behavior.
-
-Files expected to change:
-- zephyr_xml_importer/api/permissions.py
-- tests/test_permissions.py
-
-Verification steps:
-- pytest -q
-- python -m ruff check .
+Status: completed.

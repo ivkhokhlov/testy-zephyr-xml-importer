@@ -5,7 +5,12 @@ from typing import Any, Mapping
 from .permissions import IsAdminForZephyrImport
 from .serializers import ImportRequestData, ImportValidationError, validate_import_request
 from ..services.importer import DryRunImportResult, dry_run_import, import_into_testy
-from ..services.testy_adapter import TestyAdapterError
+from ..services.testy_adapter import TestyAdapterError, load_project_choices
+
+try:
+    from django.shortcuts import render
+except Exception:  # pragma: no cover - Django optional for unit tests
+    render = None
 
 try:
     from rest_framework.response import Response
@@ -98,6 +103,26 @@ def handle_import_request(data: Mapping[str, Any]) -> dict[str, Any]:
 
 class ImportView(APIView):  # type: ignore[misc]
     permission_classes = [IsAdminForZephyrImport]
+
+    def get(self, request, *args, **kwargs):  # type: ignore[override]
+        projects: list[Any] | None = None
+        project_list_error: str | None = None
+        try:
+            projects, project_list_error = load_project_choices()
+        except Exception as exc:  # pragma: no cover - depends on TestY runtime
+            projects = None
+            project_list_error = str(exc)
+
+        context = {
+            "projects": projects,
+            "project_list_error": project_list_error,
+        }
+        if render is None:
+            return {
+                "status": "failed",
+                "errors": {"detail": "HTML UI is unavailable in this environment"},
+            }
+        return render(request, "zephyr_xml_importer/import.html", context)
 
     def post(self, request, *args, **kwargs):  # type: ignore[override]
         payload = _extract_payload(request)

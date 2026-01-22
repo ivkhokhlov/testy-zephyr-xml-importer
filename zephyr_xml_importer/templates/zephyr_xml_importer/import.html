@@ -1,0 +1,498 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Zephyr Scale XML Importer</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f6f7f9;
+        --panel: #ffffff;
+        --border: #d9dde3;
+        --text: #1f2430;
+        --muted: #5a6270;
+        --accent: #0f6feb;
+        --accent-weak: #e6f0ff;
+        --warn: #d97706;
+        --error: #b42318;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        padding: 0;
+        font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+        background: var(--bg);
+        color: var(--text);
+      }
+
+      .page {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 32px 24px 48px;
+      }
+
+      .header {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        margin-bottom: 24px;
+      }
+
+      .header h1 {
+        margin: 0;
+        font-size: 24px;
+        letter-spacing: 0.2px;
+      }
+
+      .header p {
+        margin: 4px 0 0;
+        color: var(--muted);
+      }
+
+      .panels {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+        gap: 20px;
+      }
+
+      .panel {
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 20px;
+        box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
+      }
+
+      .panel h2 {
+        margin: 0 0 16px;
+        font-size: 18px;
+      }
+
+      .field {
+        margin-bottom: 16px;
+      }
+
+      .field label {
+        display: block;
+        font-weight: 600;
+        margin-bottom: 6px;
+      }
+
+      .field input[type="text"],
+      .field input[type="number"],
+      .field input[type="file"],
+      .field select {
+        width: 100%;
+        padding: 8px 10px;
+        border-radius: 8px;
+        border: 1px solid var(--border);
+        background: #fff;
+        font-size: 14px;
+      }
+
+      .hint {
+        margin-top: 6px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .options {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        gap: 8px 16px;
+      }
+
+      .option {
+        display: flex;
+        align-items: flex-start;
+        gap: 8px;
+        font-size: 14px;
+      }
+
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 12px;
+      }
+
+      button {
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 10px 16px;
+        font-size: 14px;
+        cursor: pointer;
+        background: #fff;
+      }
+
+      button.primary {
+        background: var(--accent);
+        border-color: var(--accent);
+        color: #fff;
+      }
+
+      button:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+      }
+
+      .status {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 12px;
+        font-size: 14px;
+      }
+
+      .status span {
+        padding: 2px 8px;
+        border-radius: 999px;
+        background: var(--accent-weak);
+        color: var(--accent);
+        font-weight: 600;
+      }
+
+      .status span.is-error {
+        background: rgba(180, 35, 24, 0.12);
+        color: var(--error);
+      }
+
+      .status span.is-warn {
+        background: rgba(217, 119, 6, 0.12);
+        color: var(--warn);
+      }
+
+      .summary {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-bottom: 16px;
+      }
+
+      .badge {
+        border-radius: 999px;
+        padding: 4px 10px;
+        background: #f1f5f9;
+        border: 1px solid var(--border);
+        font-size: 12px;
+      }
+
+      .warnings {
+        margin-bottom: 16px;
+      }
+
+      .warnings ul {
+        margin: 8px 0 0;
+        padding-left: 18px;
+        font-size: 13px;
+        color: var(--muted);
+      }
+
+      .errors {
+        background: rgba(180, 35, 24, 0.08);
+        border: 1px solid rgba(180, 35, 24, 0.2);
+        padding: 10px;
+        border-radius: 8px;
+        color: var(--error);
+        font-size: 13px;
+        white-space: pre-wrap;
+      }
+
+      .muted {
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .hidden {
+        display: none;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="page">
+      <header class="header">
+        <div>
+          <h1>Zephyr Scale XML Importer</h1>
+          <p>Import Zephyr Scale XML exports into TestY projects.</p>
+        </div>
+      </header>
+
+      <div class="panels">
+        <section class="panel">
+          <h2>Import</h2>
+          <form id="import-form" action="" method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            <div class="field">
+              <label for="project-select">Project</label>
+              {% if projects %}
+                <select id="project-select" name="project_id" required>
+                  <option value="">Select a project</option>
+                  {% for project in projects %}
+                    <option value="{{ project.id }}">{{ project.id }} - {{ project.name }}</option>
+                  {% endfor %}
+                </select>
+              {% else %}
+                <input id="project-input" name="project_id" type="number" min="1" placeholder="Project id" required>
+                <div class="hint">
+                  Project list is unavailable. Enter a project id manually.
+                  {% if project_list_error %}({{ project_list_error }}){% endif %}
+                </div>
+              {% endif %}
+            </div>
+
+            <div class="field">
+              <label for="xml-file">XML file</label>
+              <input id="xml-file" name="xml_file" type="file" accept=".xml" required>
+            </div>
+
+            <div class="field">
+              <label for="attachments-zip">Attachments ZIP (optional)</label>
+              <input id="attachments-zip" name="attachments_zip" type="file" accept=".zip">
+              <div class="hint">Matching by filename (basename) without paths.</div>
+            </div>
+
+            <div class="field">
+              <label>Import options</label>
+              <div class="options">
+                <label class="option"><input id="dry-run" type="checkbox"> Dry run</label>
+                <label class="option"><input id="prefix-with-key" type="checkbox" checked> Prefix with Zephyr key</label>
+                <label class="option"><input id="meta-labels" type="checkbox" checked> Meta labels</label>
+                <label class="option"><input id="append-jira" type="checkbox" checked> Append Jira issues to description</label>
+                <label class="option"><input id="embed-testdata" type="checkbox" checked> Embed test data to description</label>
+              </div>
+            </div>
+
+            <div class="field">
+              <label for="on-duplicate">On duplicate</label>
+              <select id="on-duplicate" name="on_duplicate">
+                <option value="skip" selected>Skip</option>
+                <option value="upsert">Upsert</option>
+              </select>
+            </div>
+
+            <div class="actions">
+              <button class="primary" id="run-btn" type="submit">Run</button>
+              <button id="download-btn" type="button" disabled>Download CSV report</button>
+              <button type="reset">Reset</button>
+            </div>
+          </form>
+        </section>
+
+        <section class="panel">
+          <h2>Result</h2>
+          <div class="status">
+            <span id="status-pill">Idle</span>
+            <div class="muted" id="status-text">Awaiting import request.</div>
+          </div>
+
+          <div id="result-empty" class="muted">No results yet.</div>
+
+          <div id="summary" class="summary hidden"></div>
+
+          <div id="warnings" class="warnings hidden">
+            <strong>Warnings</strong>
+            <ul id="warnings-list"></ul>
+          </div>
+
+          <div id="errors" class="errors hidden"></div>
+        </section>
+      </div>
+    </div>
+
+    <script>
+      (function () {
+        const form = document.getElementById("import-form");
+        const runBtn = document.getElementById("run-btn");
+        const downloadBtn = document.getElementById("download-btn");
+        const statusPill = document.getElementById("status-pill");
+        const statusText = document.getElementById("status-text");
+        const summary = document.getElementById("summary");
+        const warnings = document.getElementById("warnings");
+        const warningsList = document.getElementById("warnings-list");
+        const errors = document.getElementById("errors");
+        const emptyResult = document.getElementById("result-empty");
+        let latestReportCsv = null;
+
+        const summaryKeys = [
+          { key: "folders", label: "Folders" },
+          { key: "cases", label: "Cases" },
+          { key: "steps", label: "Steps" },
+          { key: "labels", label: "Labels" },
+          { key: "attachments", label: "Attachments" },
+          { key: "created", label: "Created" },
+          { key: "reused", label: "Reused" },
+          { key: "updated", label: "Updated" },
+          { key: "skipped", label: "Skipped" },
+          { key: "failed", label: "Failed" }
+        ];
+
+        function setStatus(text, kind, detail) {
+          statusPill.textContent = text;
+          statusPill.classList.remove("is-error", "is-warn");
+          if (kind === "error") {
+            statusPill.classList.add("is-error");
+          } else if (kind === "warn") {
+            statusPill.classList.add("is-warn");
+          }
+          statusText.textContent = detail || "";
+        }
+
+        function clearResult() {
+          summary.innerHTML = "";
+          warningsList.innerHTML = "";
+          summary.classList.add("hidden");
+          warnings.classList.add("hidden");
+          errors.classList.add("hidden");
+          errors.textContent = "";
+          emptyResult.classList.remove("hidden");
+        }
+
+        function renderSummary(summaryData) {
+          summary.innerHTML = "";
+          summaryKeys.forEach((item) => {
+            const value = summaryData && item.key in summaryData ? summaryData[item.key] : 0;
+            const badge = document.createElement("span");
+            badge.className = "badge";
+            badge.textContent = `${item.label}: ${value}`;
+            summary.appendChild(badge);
+          });
+          summary.classList.remove("hidden");
+          emptyResult.classList.add("hidden");
+        }
+
+        function renderWarnings(warningsData) {
+          warningsList.innerHTML = "";
+          const items = Array.isArray(warningsData) ? warningsData : [];
+          const limited = items.slice(0, 50);
+          limited.forEach((item) => {
+            const li = document.createElement("li");
+            li.textContent = item;
+            warningsList.appendChild(li);
+          });
+          if (items.length > 50) {
+            const li = document.createElement("li");
+            li.textContent = `+ ${items.length - 50} more`;
+            warningsList.appendChild(li);
+          }
+          if (limited.length > 0) {
+            warnings.classList.remove("hidden");
+          } else {
+            warnings.classList.add("hidden");
+          }
+        }
+
+        function renderErrors(errorsData) {
+          errors.textContent = typeof errorsData === "string" ? errorsData : JSON.stringify(errorsData, null, 2);
+          errors.classList.remove("hidden");
+          emptyResult.classList.add("hidden");
+        }
+
+        function setDownload(enabled, csvText) {
+          latestReportCsv = enabled ? csvText || "" : null;
+          downloadBtn.disabled = !enabled;
+        }
+
+        function getCookie(name) {
+          const value = `; ${document.cookie}`;
+          const parts = value.split(`; ${name}=`);
+          if (parts.length === 2) {
+            return parts.pop().split(";").shift();
+          }
+          return null;
+        }
+
+        form.addEventListener("submit", async (event) => {
+          event.preventDefault();
+          runBtn.disabled = true;
+          setDownload(false, null);
+          clearResult();
+          setStatus("Running", "warn", "Submitting import request...");
+
+          const formData = new FormData();
+          const projectSelect = document.getElementById("project-select");
+          const projectInput = document.getElementById("project-input");
+          const projectId = projectSelect ? projectSelect.value : projectInput ? projectInput.value : "";
+          formData.set("project_id", projectId);
+
+          const xmlFile = document.getElementById("xml-file");
+          if (xmlFile && xmlFile.files && xmlFile.files[0]) {
+            formData.set("xml_file", xmlFile.files[0]);
+          }
+
+          const attachmentsZip = document.getElementById("attachments-zip");
+          if (attachmentsZip && attachmentsZip.files && attachmentsZip.files[0]) {
+            formData.set("attachments_zip", attachmentsZip.files[0]);
+          }
+
+          formData.set("dry_run", document.getElementById("dry-run").checked ? "true" : "false");
+          formData.set(
+            "prefix_with_zephyr_key",
+            document.getElementById("prefix-with-key").checked ? "true" : "false"
+          );
+          formData.set("meta_labels", document.getElementById("meta-labels").checked ? "true" : "false");
+          formData.set(
+            "append_jira_issues_to_description",
+            document.getElementById("append-jira").checked ? "true" : "false"
+          );
+          formData.set(
+            "embed_testdata_to_description",
+            document.getElementById("embed-testdata").checked ? "true" : "false"
+          );
+          formData.set("on_duplicate", document.getElementById("on-duplicate").value);
+
+          const csrfToken = getCookie("csrftoken");
+          const headers = {};
+          if (csrfToken) {
+            headers["X-CSRFToken"] = csrfToken;
+          }
+
+          try {
+            const response = await fetch(form.action || window.location.href, {
+              method: "POST",
+              credentials: "same-origin",
+              headers,
+              body: formData
+            });
+            const data = await response.json();
+            if (data.status === "success") {
+              setStatus("Success", "", data.dry_run ? "Dry run completed." : "Import completed.");
+              renderSummary(data.summary || {});
+              renderWarnings(data.warnings || []);
+              if (data.report_csv) {
+                setDownload(true, data.report_csv);
+              }
+            } else {
+              setStatus("Failed", "error", "Import failed.");
+              renderErrors(data.errors || data);
+            }
+          } catch (error) {
+            setStatus("Failed", "error", "Request failed.");
+            renderErrors({ detail: String(error) });
+          } finally {
+            runBtn.disabled = false;
+          }
+        });
+
+        downloadBtn.addEventListener("click", () => {
+          if (!latestReportCsv) {
+            return;
+          }
+          const blob = new Blob([latestReportCsv], { type: "text/csv;charset=utf-8;" });
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement("a");
+          link.href = url;
+          link.download = "zephyr-import-report.csv";
+          document.body.appendChild(link);
+          link.click();
+          link.remove();
+          URL.revokeObjectURL(url);
+        });
+      })();
+    </script>
+  </body>
+</html>

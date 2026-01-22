@@ -89,3 +89,8 @@
 - 2026-01-21T19:37:50Z — WORKER CODEX_ITERATION=6 task=ZEP-170 tests=passed; lint=failed (ruff missing)
 
 - 2026-01-21T19:40:21Z — JUDGE CODEX_ITERATION=6 verdict=PASS why=ZEP-170 acceptance met (admin role check); tests=passed (pytest -q)
+
+- 2026-01-22T09:08:54Z — PLANNER CODEX_ITERATION=1 selected ZEP-200; queue edits: moved ZEP-200 into Now with acceptance criteria
+2026-01-22T09:13:12Z — WORKER CODEX_ITERATION=1 task=ZEP-200 tests=passed (pytest -q); lint=failed (ruff missing)
+- 2026-01-22T09:16:09Z — JUDGE CODEX_ITERATION=1 verdict=PASS why=ZEP-200 acceptance met (UI plan doc); tests=passed (pytest -q)
+- 2026-01-22T09:46:06Z — WORKER task=UI HTML import page tests=passed (pytest -q)

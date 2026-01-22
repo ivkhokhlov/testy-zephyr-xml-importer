@@ -21,6 +21,9 @@ dev = [
 [project.entry-points."testy"]
 zephyr-xml-importer = "zephyr_xml_importer.hooks"
 
+[tool.setuptools.package-data]
+zephyr_xml_importer = ["templates/**/*.html"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-q"
