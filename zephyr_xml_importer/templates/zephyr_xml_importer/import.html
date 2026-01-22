@@ -397,6 +397,29 @@
           downloadBtn.disabled = !enabled;
         }
 
+        async function readResponseBody(response) {
+          const text = await response.text();
+          const contentType = response.headers.get("content-type") || "";
+          const trimmed = text.trim();
+          const looksLikeJson = trimmed.startsWith("{") || trimmed.startsWith("[");
+          if (contentType.includes("application/json") || looksLikeJson) {
+            try {
+              return { data: JSON.parse(text), isJson: true, text };
+            } catch (error) {
+              return { data: null, isJson: false, text, error: String(error) };
+            }
+          }
+          return { data: null, isJson: false, text };
+        }
+
+        function buildNonJsonError(response, bodyText) {
+          const detail = `Non-JSON response (${response.status} ${response.statusText}).`;
+          const trimmed = (bodyText || "").trim();
+          const previewLimit = 4000;
+          const preview = trimmed.length > previewLimit ? `${trimmed.slice(0, previewLimit)}…` : trimmed;
+          return { detail, body: preview };
+        }
+
         function getCookie(name) {
           const value = `; ${document.cookie}`;
           const parts = value.split(`; ${name}=`);
@@ -458,17 +481,20 @@
               headers,
               body: formData
             });
-            const data = await response.json();
-            if (data.status === "success") {
-              setStatus("Success", "", data.dry_run ? "Dry run completed." : "Import completed.");
-              renderSummary(data.summary || {});
-              renderWarnings(data.warnings || []);
-              if (data.report_csv) {
-                setDownload(true, data.report_csv);
+            const parsed = await readResponseBody(response);
+            if (parsed.data && parsed.data.status === "success") {
+              setStatus("Success", "", parsed.data.dry_run ? "Dry run completed." : "Import completed.");
+              renderSummary(parsed.data.summary || {});
+              renderWarnings(parsed.data.warnings || []);
+              if (parsed.data.report_csv) {
+                setDownload(true, parsed.data.report_csv);
               }
+            } else if (parsed.data) {
+              setStatus("Failed", "error", "Import failed.");
+              renderErrors(parsed.data.errors || parsed.data);
             } else {
               setStatus("Failed", "error", "Import failed.");
-              renderErrors(data.errors || data);
+              renderErrors(buildNonJsonError(response, parsed.text));
             }
           } catch (error) {
             setStatus("Failed", "error", "Request failed.");

@@ -4,6 +4,7 @@ from typing import Any, Mapping
 
 from .permissions import IsAdminForZephyrImport
 from .serializers import ImportRequestData, ImportValidationError, validate_import_request
+from .. import __version__
 from ..services.importer import DryRunImportResult, dry_run_import, import_into_testy
 from ..services.testy_adapter import TestyAdapterError, load_project_choices
 
@@ -151,6 +152,14 @@ def handle_import_request(data: Mapping[str, Any]) -> dict[str, Any]:
     return build_import_response(request_data)
 
 
+def build_health_payload() -> dict[str, Any]:
+    return {
+        "status": "ok",
+        "plugin": "zephyr-xml-importer",
+        "version": __version__,
+    }
+
+
 class ImportView(APIView):  # type: ignore[misc]
     permission_classes = [IsAdminForZephyrImport]
 
@@ -199,3 +208,13 @@ class ImportView(APIView):  # type: ignore[misc]
             else drf_status.HTTP_400_BAD_REQUEST
         )
         return Response(response_data, status=status_code)
+
+
+class HealthView(APIView):  # type: ignore[misc]
+    permission_classes = [IsAdminForZephyrImport]
+
+    def get(self, request, *args, **kwargs):  # type: ignore[override]
+        payload = build_health_payload()
+        if Response is None:
+            return payload
+        return Response(payload, status=drf_status.HTTP_200_OK)
