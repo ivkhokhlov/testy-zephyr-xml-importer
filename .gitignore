@@ -6,6 +6,5 @@ __pycache__/
 dist/
 build/
 *.egg-info/
-.agent/logs/*.out
-.agent/logs/*.err
 tmp
+.DS_Store
