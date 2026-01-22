@@ -1,10 +1,12 @@
-Implemented ZEP-170 by narrowing admin checks to membership role names only (plus superuser).
-Removed checks against `user.role_name`, `user.role`, and groups to avoid over-permissive access.
-Added permission unit tests for membership allow, memberships list allow, and non-membership role deny.
-Tests: `pytest -q` passed.
-Lint: `python -m ruff check .` failed (ruff not installed).
-Files changed: `zephyr_xml_importer/api/permissions.py`.
-Files changed: `tests/test_permissions.py`.
-Worker report: `.agent/worker_report.md`.
-Test log: `.agent/logs/test_${CODEX_ITERATION}.log`.
-Lint log: `.agent/logs/lint_${CODEX_ITERATION}.log`.
+- Implemented the ZEP-200 UI plan covering endpoints, template wiring, JS/CSRF, and response rendering.
+- Included CSV download flow and warnings cap/+N overflow handling in the plan.
+- Added project list fallback and template packaging notes in the plan.
+- Documented expected file changes and tests to add.
+- Added `docs/zep-200-plan.md`.
+- Tests: `pytest -q` passed.
+- Lint: `python -m ruff check .` failed (ruff not installed).
+- Worker report: `.agent/worker_report.md`.
+- Test log: `.agent/logs/test_1.log`.
+- Lint log: `.agent/logs/lint_1.log`.
+- Progress updated: `.agent/progress.md`.
+- Next step: implement the UI per `docs/zep-200-plan.md` if desired.

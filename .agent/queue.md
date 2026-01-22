@@ -1,6 +1,7 @@
 # Queue
 
 ## Now
+ 
 
 
 ## Next
@@ -9,6 +10,9 @@
  
 
 ## Done
+- [x] ZEP-200 — Draft implementation plan for Zephyr XML Importer UI (docs/zep-200-spec.md)
+  - Acceptance: `docs/zep-200-plan.md` created with detailed plan for UI endpoints, templates, JS/CSRF behavior, response rendering, CSV download, and project list fallback.
+  - Acceptance: plan lists expected files to change and tests to add.
 - [x] ZEP-170 — Admin role check: restrict to TestY membership role if required
 - [x] ZEP-160 — Dry-run validations: warn on missing folder, empty expected, cap warning preview
 - [x] ZEP-150 — Packaging: add [build-system] to pyproject.toml for pip install reliability
