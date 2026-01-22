@@ -1,12 +1,9 @@
 # Plan
 
-Task: Implement UI for Zephyr XML Importer (native HTML page).
+Task: Bump plugin/package version to 0.1.1 to force reload.
 
 Steps:
-- Add project list loader with safe fallback for missing TestY models.
-- Serve HTML template from GET /plugins/zephyr-xml-importer/import/.
-- Build self-contained template with form, JS fetch, CSRF header, and result rendering.
-- Ensure templates are packaged in distribution.
-- Add unit tests for project list helper and run pytest.
+- Update version in `zephyr_xml_importer/hooks.py` and `pyproject.toml`.
+- Run tests.
 
 Status: completed.

@@ -21,7 +21,7 @@ class ZephyrXmlImporterConfig(TestyPluginConfig):  # type: ignore
     package_name = "zephyr_xml_importer"
     verbose_name = "Zephyr Scale XML importer"
     description = "Import Zephyr Scale XML export into TestY"
-    version = "0.1.0"
+    version = "0.1.1"
     plugin_base_url = "zephyr-xml-importer"
     urls_module = "zephyr_xml_importer.api.urls"
     index_reverse_name = "import"

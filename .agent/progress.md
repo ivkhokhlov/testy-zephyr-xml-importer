@@ -94,3 +94,4 @@
 2026-01-22T09:13:12Z — WORKER CODEX_ITERATION=1 task=ZEP-200 tests=passed (pytest -q); lint=failed (ruff missing)
 - 2026-01-22T09:16:09Z — JUDGE CODEX_ITERATION=1 verdict=PASS why=ZEP-200 acceptance met (UI plan doc); tests=passed (pytest -q)
 - 2026-01-22T09:46:06Z — WORKER task=UI HTML import page tests=passed (pytest -q)
+- 2026-01-22T10:47:17Z — WORKER task=version bump to 0.1.1 tests=passed (pytest -q)
