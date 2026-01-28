@@ -42,9 +42,9 @@ def _open_workbook(source: str | Path | BinaryIO | bytes) -> Iterator[Any]:
 
     if isinstance(source, (bytes, bytearray)):
         buffer = BytesIO(bytes(source))
-        wb = openpyxl.load_workbook(buffer, read_only=True, data_only=True)
+        wb = openpyxl.load_workbook(buffer, read_only=False, data_only=True)
     elif isinstance(source, (str, Path)):
-        wb = openpyxl.load_workbook(source, read_only=True, data_only=True)
+        wb = openpyxl.load_workbook(source, read_only=False, data_only=True)
     else:
         stream = source
         seekable = False
@@ -58,13 +58,13 @@ def _open_workbook(source: str | Path | BinaryIO | bytes) -> Iterator[Any]:
             except Exception:
                 seekable = False
         if seekable:
-            wb = openpyxl.load_workbook(stream, read_only=True, data_only=True)
+            wb = openpyxl.load_workbook(stream, read_only=False, data_only=True)
         else:
             data = stream.read()
             if isinstance(data, str):
                 data = data.encode("utf-8")
             buffer = BytesIO(data)
-            wb = openpyxl.load_workbook(buffer, read_only=True, data_only=True)
+            wb = openpyxl.load_workbook(buffer, read_only=False, data_only=True)
     try:
         yield wb
     finally:
