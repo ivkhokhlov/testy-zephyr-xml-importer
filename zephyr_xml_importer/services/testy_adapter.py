@@ -22,6 +22,7 @@ class BaseTestyAdapter:
         name: str,
         parent_id: int | None,
         attributes: Mapping[str, Any] | None,
+        description: str | None = None,
     ) -> int:
         raise NotImplementedError
 
@@ -278,6 +279,7 @@ class TestyServiceAdapter(BaseTestyAdapter):
         name: str,
         parent_id: int | None,
         attributes: Mapping[str, Any] | None,
+        description: str | None = None,
     ) -> int:
         project = self._get_project(project_id)
         parent = self._get_suite(parent_id) if parent_id is not None else None
@@ -285,7 +287,7 @@ class TestyServiceAdapter(BaseTestyAdapter):
             "project": project,
             "parent": parent,
             "name": name,
-            "description": "",
+            "description": description or "",
             "attributes": dict(attributes or {}),
         }
         suite = self._suite_service.suite_create(payload)
@@ -392,6 +394,7 @@ class InMemorySuite:
     project_id: int
     name: str
     parent_id: int | None
+    description: str | None = None
     attributes: dict[str, Any] = field(default_factory=dict)
 
 
@@ -423,6 +426,7 @@ class InMemoryTestyAdapter(BaseTestyAdapter):
         name: str,
         parent_id: int | None,
         attributes: Mapping[str, Any] | None,
+        description: str | None = None,
     ) -> int:
         suite_id = self._next_suite_id
         self._next_suite_id += 1
@@ -431,6 +435,7 @@ class InMemoryTestyAdapter(BaseTestyAdapter):
             project_id=project_id,
             name=name,
             parent_id=parent_id,
+            description=description,
             attributes=dict(attributes or {}),
         )
         self.suites[suite_id] = suite

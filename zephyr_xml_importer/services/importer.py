@@ -351,6 +351,7 @@ def import_into_testy(
                     name,
                     parent_id,
                     _suite_attributes(folder_path, folder_meta.index if folder_meta else None),
+                    description=folder_meta.description if folder_meta else None,
                 )
             else:
                 suite_id = existing

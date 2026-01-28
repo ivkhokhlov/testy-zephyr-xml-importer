@@ -7,6 +7,7 @@ from dataclasses import dataclass, field
 class ZephyrFolder:
     full_path: str
     index: int | None = None
+    description: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -48,6 +49,7 @@ class ZephyrTestCase:
     name: str | None
 
     folder: str | None = None
+    folder_description: str | None = None
     objective: str | None = None
     precondition: str | None = None
 

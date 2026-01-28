@@ -6,6 +6,7 @@
 - If `folder` is empty, cases are placed into `(No folder)`.
 - Each suite stores Zephyr trace in `attributes.zephyr`:
   `{"folderFullPath": "a/b", "folderIndex": 123}`.
+- For XLSX imports, `Folder Description` sets the suite description.
 
 ### Test case
 - `name` optionally prefixed with Zephyr key: `[KEY] Name`.
@@ -45,6 +46,7 @@
 - Если `folder` пустой — кейсы идут в `(No folder)`.
 - В `attributes.zephyr` сохраняется след Zephyr:
   `{"folderFullPath": "a/b", "folderIndex": 123}`.
+- Для XLSX поле `Folder Description` пишет описание suite.
 
 ### Тест‑кейс
 - `name` опционально с префиксом ключа Zephyr: `[KEY] Name`.

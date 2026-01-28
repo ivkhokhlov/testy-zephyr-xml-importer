@@ -24,6 +24,7 @@ HEADER_STATUS = "status"
 HEADER_PRECONDITION = "precondition"
 HEADER_OBJECTIVE = "objective"
 HEADER_FOLDER = "folder"
+HEADER_FOLDER_DESCRIPTION = "folder_description"
 HEADER_PRIORITY = "priority"
 HEADER_LABELS = "labels"
 HEADER_OWNER = "owner"
@@ -120,6 +121,8 @@ def _header_role(normalized: str) -> str | None:
         return HEADER_OBJECTIVE
     if normalized == "folder":
         return HEADER_FOLDER
+    if normalized == "folderdescription":
+        return HEADER_FOLDER_DESCRIPTION
     if normalized == "priority":
         return HEADER_PRIORITY
     if normalized in {"labels", "label"}:
@@ -181,6 +184,7 @@ class _XlsxCaseBuilder:
     precondition: str | None
     objective: str | None
     folder: str | None
+    folder_description: str | None
     priority: str | None
     owner: str | None
     labels: list[str] = field(default_factory=list)
@@ -212,6 +216,10 @@ class _XlsxCaseBuilder:
             self.issues = _build_issues(_row_value(row, header_index.get(HEADER_ISSUES)))
         if not self.folder:
             self.folder = _coerce_text(_row_value(row, header_index.get(HEADER_FOLDER)))
+        if not self.folder_description:
+            self.folder_description = _coerce_text(
+                _row_value(row, header_index.get(HEADER_FOLDER_DESCRIPTION))
+            )
         if not self.test_script_text:
             self._set_script_text(row, header_index)
 
@@ -236,6 +244,7 @@ class _XlsxCaseBuilder:
             key=self.key,
             name=self.name,
             folder=self.folder,
+            folder_description=self.folder_description,
             objective=self.objective,
             precondition=self.precondition,
             status=self.status,
@@ -294,6 +303,9 @@ def iter_test_cases_xlsx(source: str | Path | BinaryIO | bytes) -> Iterator[Zeph
                         _row_value(row_tuple, header_index.get(HEADER_OBJECTIVE))
                     ),
                     folder=_coerce_text(_row_value(row_tuple, header_index.get(HEADER_FOLDER))),
+                    folder_description=_coerce_text(
+                        _row_value(row_tuple, header_index.get(HEADER_FOLDER_DESCRIPTION))
+                    ),
                     priority=_coerce_text(_row_value(row_tuple, header_index.get(HEADER_PRIORITY))),
                     owner=_coerce_text(_row_value(row_tuple, header_index.get(HEADER_OWNER))),
                     labels=_split_tokens(_row_value(row_tuple, header_index.get(HEADER_LABELS))),
@@ -315,7 +327,20 @@ def build_folders_from_cases(cases: list[ZephyrTestCase]) -> dict[str, ZephyrFol
     folders: dict[str, ZephyrFolder] = {}
     for tc in cases:
         folder_path = (tc.folder or "").strip()
-        if not folder_path or folder_path in folders:
+        if not folder_path:
             continue
-        folders[folder_path] = ZephyrFolder(full_path=folder_path, index=None)
+        folder_description = _coerce_text(tc.folder_description)
+        existing = folders.get(folder_path)
+        if existing is None:
+            folders[folder_path] = ZephyrFolder(
+                full_path=folder_path,
+                index=None,
+                description=folder_description,
+            )
+        elif existing.description is None and folder_description:
+            folders[folder_path] = ZephyrFolder(
+                full_path=existing.full_path,
+                index=existing.index,
+                description=folder_description,
+            )
     return folders

@@ -1,5 +1,13 @@
 import csv
 from io import StringIO
+from pathlib import Path
+
+import pytest
+
+try:
+    import openpyxl
+except Exception:  # pragma: no cover - dependency should be installed in runtime
+    openpyxl = None
 
 from zephyr_xml_importer.services.importer import import_into_testy
 from zephyr_xml_importer.services.testy_adapter import InMemoryTestyAdapter
@@ -144,3 +152,37 @@ def test_import_precreates_folder_tree_from_folders_list():
     assert forms.attributes["zephyr"]["folderFullPath"] == "ui/forms"
     assert api.attributes["zephyr"]["folderFullPath"] == "api"
     assert auth.attributes["zephyr"]["folderFullPath"] == "api/auth"
+
+
+@pytest.mark.skipif(openpyxl is None, reason="openpyxl is required for XLSX parsing")
+def test_import_sets_suite_description_from_folder_description(tmp_path: Path) -> None:
+    workbook_path = tmp_path / "folders.xlsx"
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.append(["Key", "Name", "Folder", "Folder Description"])
+    ws.append(["EX-1", "Case one", "Top/Sub", "Sub suite description"])
+    wb.save(workbook_path)
+    wb.close()
+
+    adapter = InMemoryTestyAdapter()
+    result = import_into_testy(workbook_path, project_id=1, adapter=adapter)
+
+    assert result.summary.cases == 1
+
+    def find_suite(name: str, parent_name: str | None = None):
+        for suite in adapter.suites.values():
+            if suite.name != name:
+                continue
+            if parent_name is None and suite.parent_id is None:
+                return suite
+            if parent_name is not None:
+                parent = adapter.suites.get(suite.parent_id)
+                if parent and parent.name == parent_name:
+                    return suite
+        return None
+
+    top = find_suite("Top")
+    assert top is not None
+    sub = find_suite("Sub", parent_name="Top")
+    assert sub is not None
+    assert sub.description == "Sub suite description"

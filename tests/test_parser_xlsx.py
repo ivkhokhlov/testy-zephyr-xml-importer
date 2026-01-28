@@ -25,6 +25,7 @@ def test_iter_test_cases_xlsx(tmp_path: Path) -> None:
             "Precondition",
             "Objective",
             "Folder",
+            "Folder Description",
             "Priority",
             "Labels",
             "Owner",
@@ -44,6 +45,7 @@ def test_iter_test_cases_xlsx(tmp_path: Path) -> None:
             "User exists",
             "Goal",
             "/ui/Login",
+            "Login form checks",
             "High",
             "smoke, regression",
             "alice",
@@ -57,6 +59,7 @@ def test_iter_test_cases_xlsx(tmp_path: Path) -> None:
     )
     ws.append(
         [
+            None,
             None,
             None,
             None,
@@ -82,6 +85,7 @@ def test_iter_test_cases_xlsx(tmp_path: Path) -> None:
             None,
             None,
             "",
+            None,
             "Low",
             "label1",
             "bob",
@@ -103,6 +107,7 @@ def test_iter_test_cases_xlsx(tmp_path: Path) -> None:
     assert first.key == "ES-T1"
     assert first.name == "Login works"
     assert first.folder == "/ui/Login"
+    assert first.folder_description == "Login form checks"
     assert first.labels == ["smoke", "regression"]
     assert [issue.key for issue in first.issues] == ["ES-1", "ES-2"]
     assert first.test_script_type == "steps"
@@ -121,3 +126,4 @@ def test_iter_test_cases_xlsx(tmp_path: Path) -> None:
 
     folders = build_folders_from_cases(cases)
     assert "/ui/Login" in folders
+    assert folders["/ui/Login"].description == "Login form checks"
