@@ -44,9 +44,7 @@ def test_dry_run_emits_validation_warnings(tmp_path):
     result = dry_run_import(xml_path)
 
     assert "Duplicate Zephyr key in XML: DUP-1" in result.warnings
-    assert any(
-        warning.startswith("Test case name too long") for warning in result.warnings
-    )
+    assert any(warning.startswith("Test case name too long") for warning in result.warnings)
     assert "Empty step 1 in Zephyr case DUP-1" in result.warnings
 
     rows = _parse_report(result.report_csv)
@@ -103,10 +101,7 @@ def test_dry_run_warns_on_missing_folder_and_empty_expected(tmp_path):
     result = dry_run_import(xml_path)
 
     assert "Missing folder in Zephyr case NO-FOLDER" in result.warnings
-    assert (
-        "Folder not found in Zephyr export: Missing/Path for case BAD-FOLDER"
-        in result.warnings
-    )
+    assert "Folder not found in Zephyr export: Missing/Path for case BAD-FOLDER" in result.warnings
     assert "Empty expected result for step 1 in Zephyr case BAD-FOLDER" in result.warnings
 
     rows = _parse_report(result.report_csv)
@@ -143,11 +138,9 @@ def test_dry_run_caps_warning_preview_without_truncating_report(tmp_path):
     xml = (
         "<project>\n"
         "  <folders>\n"
-        "    <folder fullPath=\"Root\" index=\"1\" />\n"
+        '    <folder fullPath="Root" index="1" />\n'
         "  </folders>\n"
-        "  <testCases>\n"
-        + "\n".join(cases)
-        + "\n  </testCases>\n"
+        "  <testCases>\n" + "\n".join(cases) + "\n  </testCases>\n"
         "</project>"
     )
     xml_path = tmp_path / "warnings-cap.xml"

@@ -115,7 +115,9 @@ def _build_response_from_result(result: DryRunImportResult, *, dry_run: bool) ->
     }
 
 
-def build_import_response(request_data: ImportRequestData, *, user: Any | None = None) -> dict[str, Any]:
+def build_import_response(
+    request_data: ImportRequestData, *, user: Any | None = None
+) -> dict[str, Any]:
     try:
         if request_data.dry_run:
             result = dry_run_import(

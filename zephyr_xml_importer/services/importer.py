@@ -343,7 +343,9 @@ def import_into_testy(
                     existing_case_id = None
                     zephyr_key = (tc.key or "").strip()
                     if zephyr_key:
-                        existing_case_id = adapter.find_case_id_by_zephyr_key(project_id, zephyr_key)
+                        existing_case_id = adapter.find_case_id_by_zephyr_key(
+                            project_id, zephyr_key
+                        )
 
                     if existing_case_id and on_duplicate == "skip":
                         action = "skipped"

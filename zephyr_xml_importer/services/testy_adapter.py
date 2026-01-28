@@ -60,9 +60,7 @@ def _resolve_class(class_name: str, module_candidates: Sequence[str]) -> type:
             continue
         if hasattr(module, class_name):
             return getattr(module, class_name)
-    raise TestyAdapterError(
-        f"Unable to import {class_name} from {', '.join(module_candidates)}"
-    )
+    raise TestyAdapterError(f"Unable to import {class_name} from {', '.join(module_candidates)}")
 
 
 def _resolve_model(class_name: str, module_candidates: Sequence[str]) -> type | None:
@@ -363,7 +361,9 @@ class TestyServiceAdapter(BaseTestyAdapter):
         case_obj = self._case_model.objects.get(id=case_id)
         project = case_obj.project
         try:
-            from django.core.files.base import ContentFile  # pragma: no cover - depends on TestY runtime
+            from django.core.files.base import (
+                ContentFile,
+            )  # pragma: no cover - depends on TestY runtime
         except Exception as exc:  # pragma: no cover - depends on TestY runtime
             raise TestyAdapterError("Django ContentFile is not available") from exc
 

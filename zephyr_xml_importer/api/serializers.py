@@ -116,7 +116,7 @@ def validate_import_request(data: Mapping[str, Any]) -> ImportRequestData:
     )
 
     on_duplicate_raw = _unwrap(data.get("on_duplicate", "skip"))
-    on_duplicate = (str(on_duplicate_raw).strip().lower() if on_duplicate_raw is not None else "skip")
+    on_duplicate = str(on_duplicate_raw).strip().lower() if on_duplicate_raw is not None else "skip"
     if on_duplicate not in ON_DUPLICATE_CHOICES:
         errors["on_duplicate"] = "on_duplicate must be 'skip' or 'upsert'"
 
