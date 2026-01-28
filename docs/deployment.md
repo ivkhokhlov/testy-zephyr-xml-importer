@@ -9,7 +9,7 @@
 ### OKD notes
 - Ensure `ALLOWED_HOSTS` contains your route host.
 - Ensure `CSRF_TRUSTED_ORIGINS` contains the HTTPS origin.
-- Configure upload size limits in route/ingress if XML/ZIP are large.
+- Configure upload size limits in route/ingress if XML/XLSX/ZIP are large.
 - If a WAF is present, allowlist:
   - `POST /plugins/zephyr-xml-importer/import/` (multipart/form-data)
   - `GET /plugins/zephyr-xml-importer/health/`
@@ -30,7 +30,7 @@ TestY reads JSON lists from env:
 ### Особенности OKD
 - Убедитесь, что `ALLOWED_HOSTS` содержит ваш route host.
 - Убедитесь, что `CSRF_TRUSTED_ORIGINS` содержит HTTPS origin.
-- Настройте лимиты загрузки в route/ingress для больших XML/ZIP.
+- Настройте лимиты загрузки в route/ingress для больших XML/XLSX/ZIP.
 - При наличии WAF добавьте allowlist:
   - `POST /plugins/zephyr-xml-importer/import/` (multipart/form-data)
   - `GET /plugins/zephyr-xml-importer/health/`

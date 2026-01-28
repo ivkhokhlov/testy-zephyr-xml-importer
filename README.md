@@ -2,10 +2,10 @@
 
 ## English
 ### Overview
-Native TestY plugin that imports Zephyr Scale XML exports (Jira DC) into a selected TestY project. Supports dry‑run, optional ZIP attachments, idempotent create/skip by Zephyr key, and optional upsert.
+Native TestY plugin that imports Zephyr Scale XML/XLSX exports (Jira DC) into a selected TestY project. Supports dry‑run, optional ZIP attachments, idempotent create/skip by Zephyr key, and optional upsert.
 
 ### Features
-- Import a single XML file with optional attachments ZIP.
+- Import a single XML or XLSX file with optional attachments ZIP.
 - Dry‑run with full validation, warnings, and CSV report.
 - HTML UI + API endpoint.
 - Idempotent import by `attributes.zephyr.key` (skip or upsert).
@@ -30,7 +30,7 @@ pytest -q
 ### API (multipart)
 Fields:
 - `project_id` (required)
-- `xml_file` (required)
+- `xml_file` (required, XML or XLSX)
 - `attachments_zip` (optional)
 - `dry_run` (default false)
 - `prefix_with_zephyr_key` (default true)
@@ -51,10 +51,10 @@ See:
 
 ## Русский
 ### Обзор
-Нативный плагин TestY для импорта XML‑экспортов Zephyr Scale (Jira DC) в выбранный проект TestY. Поддерживает dry‑run, ZIP‑вложения, идемпотентное создание/пропуск по ключу Zephyr и опциональный upsert.
+Нативный плагин TestY для импорта XML/XLSX‑экспортов Zephyr Scale (Jira DC) в выбранный проект TestY. Поддерживает dry‑run, ZIP‑вложения, идемпотентное создание/пропуск по ключу Zephyr и опциональный upsert.
 
 ### Возможности
-- Импорт одного XML и опционального ZIP с вложениями.
+- Импорт одного XML или XLSX и опционального ZIP с вложениями.
 - Dry‑run с полной валидацией, предупреждениями и CSV‑отчётом.
 - HTML‑интерфейс и API‑эндпоинт.
 - Идемпотентность по `attributes.zephyr.key` (skip или upsert).
@@ -79,7 +79,7 @@ pytest -q
 ### API (multipart)
 Поля:
 - `project_id` (обязательно)
-- `xml_file` (обязательно)
+- `xml_file` (обязательно, XML или XLSX)
 - `attachments_zip` (опционально)
 - `dry_run` (по умолчанию false)
 - `prefix_with_zephyr_key` (по умолчанию true)

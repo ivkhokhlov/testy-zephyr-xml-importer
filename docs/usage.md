@@ -4,7 +4,7 @@
 ### UI
 1) Open `/plugins/zephyr-xml-importer/import/`.
 2) Select a project.
-3) Upload XML file and optional ZIP.
+3) Upload XML or XLSX file and optional ZIP.
 4) Choose options (dry‑run, meta labels, etc.).
 5) Run import and download CSV report if needed.
 
@@ -13,7 +13,7 @@ Endpoint: `/plugins/zephyr-xml-importer/import/`
 
 Fields:
 - `project_id` (required)
-- `xml_file` (required)
+- `xml_file` (required, XML or XLSX)
 - `attachments_zip` (optional)
 - `dry_run` (default false)
 - `prefix_with_zephyr_key` (default true)
@@ -31,6 +31,17 @@ curl -i \
   -F "xml_file=@/path/to/export.xml;type=application/xml" \
   -F "attachments_zip=@/path/to/attachments.zip;type=application/zip" \
   https://<HOST>/plugins/zephyr-xml-importer/import/
+```
+
+XLSX variant:
+```bash
+curl -i \
+  -H "Authorization: Bearer <ACCESS_TOKEN>" \
+  -F project_id=1 \
+  -F dry_run=true \
+  -F "xml_file=@/path/to/export.xlsx;type=application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" \
+  https://<HOST>/plugins/zephyr-xml-importer/import/
+```
 
 Example with session cookies:
 ```bash
@@ -87,7 +98,7 @@ Failed:
 ### Интерфейс
 1) Откройте `/plugins/zephyr-xml-importer/import/`.
 2) Выберите проект.
-3) Загрузите XML и опциональный ZIP.
+3) Загрузите XML или XLSX и опциональный ZIP.
 4) Укажите опции (dry‑run, meta‑labels и т.д.).
 5) Запустите импорт и при необходимости скачайте CSV‑отчёт.
 
@@ -96,7 +107,7 @@ Failed:
 
 Поля:
 - `project_id` (обязательно)
-- `xml_file` (обязательно)
+- `xml_file` (обязательно, XML или XLSX)
 - `attachments_zip` (опционально)
 - `dry_run` (по умолчанию false)
 - `prefix_with_zephyr_key` (по умолчанию true)
@@ -113,6 +124,16 @@ curl -i \
   -F dry_run=true \
   -F "xml_file=@/path/to/export.xml;type=application/xml" \
   -F "attachments_zip=@/path/to/attachments.zip;type=application/zip" \
+  https://<HOST>/plugins/zephyr-xml-importer/import/
+```
+
+Вариант XLSX:
+```bash
+curl -i \
+  -H "Authorization: Bearer <ACCESS_TOKEN>" \
+  -F project_id=1 \
+  -F dry_run=true \
+  -F "xml_file=@/path/to/export.xlsx;type=application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" \
   https://<HOST>/plugins/zephyr-xml-importer/import/
 ```
 
@@ -163,5 +184,4 @@ curl -i -H "Authorization: Bearer <ACCESS_TOKEN>" \
   "dry_run": false,
   "errors": {"detail": "..."}
 }
-```
 ```

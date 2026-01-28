@@ -13,7 +13,8 @@ from .mapping import build_testy_payload_from_zephyr, match_attachments_for_test
 from .parser import iter_test_cases, parse_folders_and_duplicate_key_counts
 from .report import ReportRow, build_csv_report
 from .testy_adapter import BaseTestyAdapter, TestyAdapterError, TestyServiceAdapter
-from .validation import build_case_warnings
+from .validation import build_case_warnings, build_duplicate_key_counts
+from .xlsx_parser import build_folders_from_cases, iter_test_cases_xlsx
 
 
 NO_FOLDER_SUITE_NAME = "(No folder)"
@@ -74,6 +75,64 @@ def _copy_stream(source: BinaryIO, destination: BinaryIO, chunk_size: int = 1024
         if isinstance(chunk, str):
             chunk = chunk.encode("utf-8")
         destination.write(chunk)
+
+
+def _extract_extension(source: Any) -> str | None:
+    if isinstance(source, (str, Path)):
+        return Path(source).suffix.lower()
+    name = getattr(source, "name", None)
+    if isinstance(name, str):
+        return Path(name).suffix.lower()
+    return None
+
+
+def _peek_head(source: Any, size: int = 4) -> tuple[bytes, BinaryIO | None]:
+    try:
+        pos = source.tell()
+    except Exception:
+        pos = None
+    try:
+        head = source.read(size)
+    except Exception:
+        return b"", None
+    if isinstance(head, str):
+        head = head.encode("utf-8")
+    if pos is not None:
+        try:
+            source.seek(pos)
+        except Exception:
+            pass
+        return bytes(head), None
+    try:
+        source.seek(0)
+        return bytes(head), None
+    except Exception:
+        pass
+    try:
+        rest = source.read()
+    except Exception:
+        rest = b""
+    if isinstance(rest, str):
+        rest = rest.encode("utf-8")
+    buffer = BytesIO(bytes(head) + bytes(rest))
+    return bytes(head), buffer
+
+
+def _prepare_source(
+    source: str | Path | BinaryIO | bytes,
+) -> tuple[str, str | Path | BinaryIO | bytes]:
+    ext = _extract_extension(source)
+    if ext == ".xlsx":
+        return "xlsx", source
+    if ext == ".xml":
+        return "xml", source
+    if isinstance(source, (bytes, bytearray)):
+        return ("xlsx" if bytes(source).startswith(b"PK") else "xml"), source
+    head, buffered = _peek_head(source)
+    if buffered is not None:
+        source = buffered
+    kind = "xlsx" if head.startswith(b"PK") else "xml"
+    return kind, source
 
 
 @contextmanager
@@ -141,11 +200,13 @@ def dry_run_import(
     label_count = 0
     attachment_count = 0
 
-    with _open_seekable_xml_source(xml_source) as xml_stream:
-        folders, duplicate_key_counts = parse_folders_and_duplicate_key_counts(xml_stream)
-        xml_stream.seek(0)
-
-        for tc in iter_test_cases(xml_stream):
+    def handle_cases(
+        case_iter: Iterator[Any],
+        folders: Mapping[str, Any],
+        duplicate_key_counts: Mapping[str, int],
+    ) -> None:
+        nonlocal case_count, step_count, label_count, attachment_count
+        for tc in case_iter:
             case_count += 1
             payload = build_testy_payload_from_zephyr(
                 tc,
@@ -188,6 +249,18 @@ def dry_run_import(
                     error=None,
                 )
             )
+
+    source_kind, prepared_source = _prepare_source(xml_source)
+    if source_kind == "xlsx":
+        cases = list(iter_test_cases_xlsx(prepared_source))
+        folders = build_folders_from_cases(cases)
+        duplicate_key_counts = build_duplicate_key_counts(cases)
+        handle_cases(iter(cases), folders, duplicate_key_counts)
+    else:
+        with _open_seekable_xml_source(prepared_source) as xml_stream:
+            folders, duplicate_key_counts = parse_folders_and_duplicate_key_counts(xml_stream)
+            xml_stream.seek(0)
+            handle_cases(iter_test_cases(xml_stream), folders, duplicate_key_counts)
 
     summary = ImportSummary(
         folders=len(folders),
@@ -255,178 +328,192 @@ def import_into_testy(
     skipped_count = 0
     failed_count = 0
 
-    try:
-        with _open_seekable_xml_source(xml_source) as xml_stream:
-            folders, duplicate_key_counts = parse_folders_and_duplicate_key_counts(xml_stream)
-            xml_stream.seek(0)
+    def run_import(
+        case_iter: Iterator[Any],
+        folders: Mapping[str, Any],
+        duplicate_key_counts: Mapping[str, int],
+    ) -> None:
+        nonlocal case_count, step_count, label_count, attachment_count
+        nonlocal created_count, reused_count, updated_count, skipped_count, failed_count
 
-            suite_cache: dict[tuple[int | None, str], int] = {}
+        suite_cache: dict[tuple[int | None, str], int] = {}
 
-            def ensure_suite(name: str, parent_id: int | None, folder_path: str | None) -> int:
-                cache_key = (parent_id, name)
-                cached = suite_cache.get(cache_key)
-                if cached is not None:
-                    return cached
-                existing = adapter.get_suite_id(project_id, name, parent_id)
-                if existing is None:
-                    folder_meta = folders.get(folder_path or "")
-                    suite_id = adapter.create_suite(
-                        project_id,
-                        name,
-                        parent_id,
-                        _suite_attributes(folder_path, folder_meta.index if folder_meta else None),
-                    )
-                else:
-                    suite_id = existing
-                suite_cache[cache_key] = suite_id
-                return suite_id
+        def ensure_suite(name: str, parent_id: int | None, folder_path: str | None) -> int:
+            cache_key = (parent_id, name)
+            cached = suite_cache.get(cache_key)
+            if cached is not None:
+                return cached
+            existing = adapter.get_suite_id(project_id, name, parent_id)
+            if existing is None:
+                folder_meta = folders.get(folder_path or "")
+                suite_id = adapter.create_suite(
+                    project_id,
+                    name,
+                    parent_id,
+                    _suite_attributes(folder_path, folder_meta.index if folder_meta else None),
+                )
+            else:
+                suite_id = existing
+            suite_cache[cache_key] = suite_id
+            return suite_id
 
-            def suite_id_for_folder(folder_path: str | None) -> int:
-                cleaned = (folder_path or "").strip()
+        def suite_id_for_folder(folder_path: str | None) -> int:
+            cleaned = (folder_path or "").strip()
+            if not cleaned:
+                return ensure_suite(NO_FOLDER_SUITE_NAME, None, None)
+            parts = [part.strip() for part in cleaned.split("/") if part.strip()]
+            parent_id: int | None = None
+            current_path = ""
+            for part in parts:
+                current_path = f"{current_path}/{part}" if current_path else part
+                parent_id = ensure_suite(part, parent_id, current_path)
+            return parent_id or ensure_suite(NO_FOLDER_SUITE_NAME, None, None)
+
+        def precreate_folder_suites() -> None:
+            for folder_path in sorted(folders):
+                cleaned = folder_path.strip()
                 if not cleaned:
-                    return ensure_suite(NO_FOLDER_SUITE_NAME, None, None)
+                    continue
                 parts = [part.strip() for part in cleaned.split("/") if part.strip()]
                 parent_id: int | None = None
                 current_path = ""
                 for part in parts:
                     current_path = f"{current_path}/{part}" if current_path else part
                     parent_id = ensure_suite(part, parent_id, current_path)
-                return parent_id or ensure_suite(NO_FOLDER_SUITE_NAME, None, None)
 
-            def precreate_folder_suites() -> None:
-                for folder_path in sorted(folders):
-                    cleaned = folder_path.strip()
-                    if not cleaned:
-                        continue
-                    parts = [part.strip() for part in cleaned.split("/") if part.strip()]
-                    parent_id: int | None = None
-                    current_path = ""
-                    for part in parts:
-                        current_path = f"{current_path}/{part}" if current_path else part
-                        parent_id = ensure_suite(part, parent_id, current_path)
+        precreate_folder_suites()
 
-            precreate_folder_suites()
+        for tc in case_iter:
+            case_count += 1
+            payload = build_testy_payload_from_zephyr(
+                tc,
+                prefix_with_zephyr_key=prefix_with_zephyr_key,
+                meta_labels=meta_labels,
+                append_jira_issues_to_description=append_jira_issues_to_description,
+                embed_testdata_to_description=embed_testdata_to_description,
+            )
+            payload_for_write = _payload_without_labels(payload)
+            steps = payload.get("steps", [])
+            labels = payload.get("labels", [])
+            step_count += len(steps)
+            label_count += len(labels)
 
-            for tc in iter_test_cases(xml_stream):
-                case_count += 1
-                payload = build_testy_payload_from_zephyr(
-                    tc,
-                    prefix_with_zephyr_key=prefix_with_zephyr_key,
-                    meta_labels=meta_labels,
-                    append_jira_issues_to_description=append_jira_issues_to_description,
-                    embed_testdata_to_description=embed_testdata_to_description,
-                )
-                payload_for_write = _payload_without_labels(payload)
-                steps = payload.get("steps", [])
-                labels = payload.get("labels", [])
-                step_count += len(steps)
-                label_count += len(labels)
+            attachment_result = match_attachments_for_testcase(tc, zip_index)
+            case_warnings = build_case_warnings(
+                tc,
+                payload["name"],
+                duplicate_key_counts,
+                folders=folders,
+            )
+            attachment_count += attachment_result.attachments_in_xml
 
-                attachment_result = match_attachments_for_testcase(tc, zip_index)
-                case_warnings = build_case_warnings(
-                    tc,
-                    payload["name"],
-                    duplicate_key_counts,
-                    folders=folders,
-                )
-                attachment_count += attachment_result.attachments_in_xml
+            row_warnings = [*case_warnings, *attachment_result.warnings]
 
-                row_warnings = [*case_warnings, *attachment_result.warnings]
+            action = "created"
+            case_id: int | None = None
+            suite_id: int | None = None
+            error: str | None = None
+            attachments_attached = 0
 
-                action = "created"
-                case_id: int | None = None
-                suite_id: int | None = None
-                error: str | None = None
-                attachments_attached = 0
+            try:
+                existing_case_id = None
+                zephyr_key = (tc.key or "").strip()
+                if zephyr_key:
+                    existing_case_id = adapter.find_case_id_by_zephyr_key(project_id, zephyr_key)
 
-                try:
-                    existing_case_id = None
-                    zephyr_key = (tc.key or "").strip()
-                    if zephyr_key:
-                        existing_case_id = adapter.find_case_id_by_zephyr_key(
-                            project_id, zephyr_key
-                        )
-
-                    if existing_case_id and on_duplicate == "skip":
-                        action = "skipped"
-                        case_id = existing_case_id
-                    else:
-                        suite_id = suite_id_for_folder(tc.folder)
-                        if existing_case_id and on_duplicate == "upsert":
-                            try:
-                                case_id = adapter.update_case_with_steps(
-                                    project_id,
-                                    existing_case_id,
-                                    suite_id,
-                                    payload_for_write,
-                                )
-                                action = "updated"
-                            except NotImplementedError:
-                                action = "skipped"
-                                case_id = existing_case_id
-                                row_warnings.append(
-                                    "Upsert requested but adapter does not support updates"
-                                )
-                        else:
-                            case_id = adapter.create_case_with_steps(
+                if existing_case_id and on_duplicate == "skip":
+                    action = "skipped"
+                    case_id = existing_case_id
+                else:
+                    suite_id = suite_id_for_folder(tc.folder)
+                    if existing_case_id and on_duplicate == "upsert":
+                        try:
+                            case_id = adapter.update_case_with_steps(
                                 project_id,
+                                existing_case_id,
                                 suite_id,
                                 payload_for_write,
                             )
-                            action = "created"
+                            action = "updated"
+                        except NotImplementedError:
+                            action = "skipped"
+                            case_id = existing_case_id
+                            row_warnings.append(
+                                "Upsert requested but adapter does not support updates"
+                            )
+                    else:
+                        case_id = adapter.create_case_with_steps(
+                            project_id,
+                            suite_id,
+                            payload_for_write,
+                        )
+                        action = "created"
 
-                        if case_id is not None:
-                            try:
-                                adapter.set_labels(project_id, case_id, labels)
-                            except Exception as exc:
-                                row_warnings.append(f"Failed to set labels: {exc}")
-
-                            if zip_archive is not None and attachment_result.matched:
-                                for matched in attachment_result.matched:
-                                    try:
-                                        data = zip_archive.read(matched)
-                                        filename = Path(matched).name or matched
-                                        adapter.attach_file(project_id, case_id, filename, data)
-                                        attachments_attached += 1
-                                    except Exception as exc:
-                                        row_warnings.append(f"Failed to attach '{matched}': {exc}")
-                except TestyAdapterError as exc:
-                    action = "failed"
-                    error = str(exc)
-                except Exception as exc:
-                    action = "failed"
-                    error = str(exc)
-
-                if action == "created":
-                    created_count += 1
-                elif action == "updated":
-                    updated_count += 1
-                elif action == "skipped":
-                    skipped_count += 1
                     if case_id is not None:
-                        reused_count += 1
-                elif action == "failed":
-                    failed_count += 1
+                        try:
+                            adapter.set_labels(project_id, case_id, labels)
+                        except Exception as exc:
+                            row_warnings.append(f"Failed to set labels: {exc}")
 
-                _collect_warnings(row_warnings, warnings, seen_warnings)
+                        if zip_archive is not None and attachment_result.matched:
+                            for matched in attachment_result.matched:
+                                try:
+                                    data = zip_archive.read(matched)
+                                    filename = Path(matched).name or matched
+                                    adapter.attach_file(project_id, case_id, filename, data)
+                                    attachments_attached += 1
+                                except Exception as exc:
+                                    row_warnings.append(f"Failed to attach '{matched}': {exc}")
+            except TestyAdapterError as exc:
+                action = "failed"
+                error = str(exc)
+            except Exception as exc:
+                action = "failed"
+                error = str(exc)
 
-                rows.append(
-                    ReportRow(
-                        zephyr_key=tc.key,
-                        zephyr_id=tc.zephyr_id,
-                        folder_full_path=tc.folder,
-                        testy_suite_id=suite_id,
-                        testy_case_id=case_id,
-                        action=action,
-                        steps_count=len(steps),
-                        labels_count=len(labels),
-                        attachments_in_xml=attachment_result.attachments_in_xml,
-                        attachments_attached=attachments_attached,
-                        attachments_missing=attachment_result.attachments_missing,
-                        warnings=row_warnings,
-                        error=error,
-                    )
+            if action == "created":
+                created_count += 1
+            elif action == "updated":
+                updated_count += 1
+            elif action == "skipped":
+                skipped_count += 1
+                if case_id is not None:
+                    reused_count += 1
+            elif action == "failed":
+                failed_count += 1
+
+            _collect_warnings(row_warnings, warnings, seen_warnings)
+
+            rows.append(
+                ReportRow(
+                    zephyr_key=tc.key,
+                    zephyr_id=tc.zephyr_id,
+                    folder_full_path=tc.folder,
+                    testy_suite_id=suite_id,
+                    testy_case_id=case_id,
+                    action=action,
+                    steps_count=len(steps),
+                    labels_count=len(labels),
+                    attachments_in_xml=attachment_result.attachments_in_xml,
+                    attachments_attached=attachments_attached,
+                    attachments_missing=attachment_result.attachments_missing,
+                    warnings=row_warnings,
+                    error=error,
                 )
+            )
+
+    try:
+        source_kind, prepared_source = _prepare_source(xml_source)
+        if source_kind == "xlsx":
+            cases = list(iter_test_cases_xlsx(prepared_source))
+            folders = build_folders_from_cases(cases)
+            duplicate_key_counts = build_duplicate_key_counts(cases)
+            run_import(iter(cases), folders, duplicate_key_counts)
+        else:
+            with _open_seekable_xml_source(prepared_source) as xml_stream:
+                folders, duplicate_key_counts = parse_folders_and_duplicate_key_counts(xml_stream)
+                xml_stream.seek(0)
+                run_import(iter_test_cases(xml_stream), folders, duplicate_key_counts)
     finally:
         if zip_archive is not None:
             zip_archive.close()

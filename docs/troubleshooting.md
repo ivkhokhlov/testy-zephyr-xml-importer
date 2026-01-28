@@ -20,10 +20,10 @@ Ensure CSRF cookie + `X-CSRFToken` header for session auth. Add origin to `CSRF_
 
 ### “xml_file is not a file”
 In curl, use `@` to upload a file:
-`-F "xml_file=@/path/to/export.xml"`.
+`-F "xml_file=@/path/to/export.xml"` (or `.xlsx`).
 
 ### Attachments missing
-Provide ZIP with files named as in XML (match by basename). Missing files create warnings.
+Provide ZIP with files named as in the export (match by basename). Missing files create warnings.
 
 ### Empty steps
 Zephyr steps without description/testData/expected generate warnings; placeholders are used.
@@ -50,10 +50,10 @@ curl -i -H "Host: testy.example.com" http://127.0.0.1:18080/plugins/zephyr-xml-i
 
 ### “xml_file не файл”
 В curl используйте `@` для файла:
-`-F "xml_file=@/path/to/export.xml"`.
+`-F "xml_file=@/path/to/export.xml"` (или `.xlsx`).
 
 ### Вложения не найдены
-Передайте ZIP с файлами, имена должны совпадать с XML (по basename). Отсутствующие → предупреждения.
+Передайте ZIP с файлами, имена должны совпадать с экспортом (по basename). Отсутствующие → предупреждения.
 
 ### Пустые шаги
 Пустые шаги Zephyr (без description/testData/expected) вызывают предупреждения; ставятся заглушки.

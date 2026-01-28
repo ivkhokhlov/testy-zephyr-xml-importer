@@ -29,7 +29,7 @@
   - `zephyr:owner=...`
 
 ### Attachments
-- XML contains names only; ZIP is optional.
+- Export contains names only; ZIP is optional.
 - Matching by basename (without paths).
 - Missing files generate warnings and remain in attributes/report.
 
@@ -68,7 +68,7 @@
   - `zephyr:owner=...`
 
 ### Вложения
-- В XML только имена; ZIP опционален.
+- В экспорте только имена; ZIP опционален.
 - Сопоставление по имени файла (без пути).
 - Отсутствующие файлы → предупреждения и запись в отчёт.
 
