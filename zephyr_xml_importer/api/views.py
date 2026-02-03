@@ -257,6 +257,21 @@ class ImportView(APIView):  # type: ignore[misc]
         return Response(response_data, status=status_code)
 
 
+class IndexView(APIView):  # type: ignore[misc]
+    permission_classes = [IsAdminForZephyrImport]
+
+    def get(self, request, *args, **kwargs):  # type: ignore[override]
+        context = {
+            "version": __version__,
+        }
+        if render is None:
+            return {
+                "status": "failed",
+                "errors": {"detail": "HTML UI is unavailable in this environment"},
+            }
+        return render(request, "zephyr_xml_importer/index.html", context)
+
+
 class ExportView(APIView):  # type: ignore[misc]
     permission_classes = [IsAdminForZephyrImport]
 

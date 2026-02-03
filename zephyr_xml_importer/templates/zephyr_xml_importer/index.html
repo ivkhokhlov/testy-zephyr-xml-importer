@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Zephyr Scale Import/Export</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f6f7f9;
+        --panel: #ffffff;
+        --border: #d9dde3;
+        --text: #1f2430;
+        --muted: #5a6270;
+        --accent: #0f6feb;
+        --accent-weak: #e6f0ff;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        padding: 0;
+        font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+        background: var(--bg);
+        color: var(--text);
+      }
+
+      .page {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 32px 24px 48px;
+      }
+
+      .header h1 {
+        margin: 0;
+        font-size: 24px;
+        letter-spacing: 0.2px;
+      }
+
+      .header p {
+        margin: 6px 0 0;
+        color: var(--muted);
+      }
+
+      .nav {
+        margin-top: 14px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+      }
+
+      .nav a {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        text-decoration: none;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 10px 14px;
+        background: #fff;
+        color: var(--text);
+        font-weight: 600;
+      }
+
+      .nav a.primary {
+        background: var(--accent);
+        border-color: var(--accent);
+        color: #fff;
+      }
+
+      .panels {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+        gap: 20px;
+        margin-top: 24px;
+      }
+
+      .panel {
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 20px;
+        box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
+      }
+
+      .panel h2 {
+        margin: 0 0 10px;
+        font-size: 18px;
+      }
+
+      .panel p {
+        margin: 0 0 16px;
+        color: var(--muted);
+        font-size: 14px;
+        line-height: 1.4;
+      }
+
+      .meta {
+        margin-top: 18px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="page">
+      <header class="header">
+        <h1>Zephyr Scale Import/Export</h1>
+        <p>Import Zephyr Scale XML/XLSX into TestY and export TestY to Zephyr Scale XLSX.</p>
+        <div class="nav">
+          <a class="primary" href="import/">Import</a>
+          <a href="export/">Export</a>
+        </div>
+        {% if version %}
+          <div class="meta">Version: {{ version }}</div>
+        {% endif %}
+      </header>
+
+      <div class="panels">
+        <section class="panel">
+          <h2>Import</h2>
+          <p>
+            Upload Zephyr Scale XML or XLSX export and import test cases into a selected TestY
+            project.
+          </p>
+          <div class="nav">
+            <a class="primary" href="import/">Open import</a>
+          </div>
+        </section>
+
+        <section class="panel">
+          <h2>Export</h2>
+          <p>
+            Export TestY suites/cases into a Zephyr Scale compatible XLSX file (folders, steps,
+            labels).
+          </p>
+          <div class="nav">
+            <a class="primary" href="export/">Open export</a>
+          </div>
+        </section>
+      </div>
+    </div>
+  </body>
+</html>

@@ -2,10 +2,12 @@
 
 ## English
 ### Overview
-Native TestY plugin that imports Zephyr Scale XML/XLSX exports (Jira DC) into a selected TestY project. Supports dry‑run, optional ZIP attachments, idempotent create/skip by Zephyr key, and optional upsert.
+Native TestY plugin that imports Zephyr Scale XML/XLSX exports (Jira DC) into a selected TestY
+project and exports TestY test cases back into a Zephyr Scale compatible XLSX file.
 
 ### Features
 - Import a single XML or XLSX file with optional attachments ZIP.
+- Export TestY suites/cases to Zephyr Scale compatible XLSX.
 - Dry‑run with full validation, warnings, and CSV report.
 - HTML UI + API endpoint.
 - Idempotent import by `attributes.zephyr.key` (skip or upsert).
@@ -24,7 +26,9 @@ pytest -q
 ```
 
 ### Usage
-- UI: `/plugins/zephyr-xml-importer/import/`
+- UI: `/plugins/zephyr-xml-importer/`
+- Import: `/plugins/zephyr-xml-importer/import/`
+- Export: `/plugins/zephyr-xml-importer/export/`
 - Health: `/plugins/zephyr-xml-importer/health/`
 
 ### API (multipart)
@@ -51,10 +55,12 @@ See:
 
 ## Русский
 ### Обзор
-Нативный плагин TestY для импорта XML/XLSX‑экспортов Zephyr Scale (Jira DC) в выбранный проект TestY. Поддерживает dry‑run, ZIP‑вложения, идемпотентное создание/пропуск по ключу Zephyr и опциональный upsert.
+Нативный плагин TestY для импорта XML/XLSX‑экспортов Zephyr Scale (Jira DC) в выбранный проект
+TestY и экспорта тест‑кейсов из TestY обратно в совместимый с Zephyr Scale XLSX.
 
 ### Возможности
 - Импорт одного XML или XLSX и опционального ZIP с вложениями.
+- Экспорт suites/cases из TestY в совместимый с Zephyr Scale XLSX.
 - Dry‑run с полной валидацией, предупреждениями и CSV‑отчётом.
 - HTML‑интерфейс и API‑эндпоинт.
 - Идемпотентность по `attributes.zephyr.key` (skip или upsert).
@@ -73,7 +79,9 @@ pytest -q
 ```
 
 ### Использование
-- UI: `/plugins/zephyr-xml-importer/import/`
+- UI: `/plugins/zephyr-xml-importer/`
+- Import: `/plugins/zephyr-xml-importer/import/`
+- Export: `/plugins/zephyr-xml-importer/export/`
 - Health: `/plugins/zephyr-xml-importer/health/`
 
 ### API (multipart)
@@ -96,4 +104,4 @@ pytest -q
 - `docs/deployment.md`
 - `docs/troubleshooting.md`
 
-Version: 0.1.3
+Version: 0.1.4

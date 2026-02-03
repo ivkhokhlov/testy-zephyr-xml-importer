@@ -1,7 +1,10 @@
 # Usage / Использование
 
 ## English
-### UI
+### Home
+1) Open `/plugins/zephyr-xml-importer/` and choose Import or Export.
+
+### Import UI
 1) Open `/plugins/zephyr-xml-importer/import/`.
 2) Select a project.
 3) Upload XML or XLSX file and optional ZIP.
@@ -129,7 +132,10 @@ Failed:
 ---
 
 ## Русский
-### Интерфейс
+### Главная
+1) Откройте `/plugins/zephyr-xml-importer/` и выберите Import или Export.
+
+### Импорт (UI)
 1) Откройте `/plugins/zephyr-xml-importer/import/`.
 2) Выберите проект.
 3) Загрузите XML или XLSX и опциональный ZIP.

@@ -1,7 +1,8 @@
 """Plugin entrypoint for TestY.
 
 This module is intentionally light because unit tests in this repo do not require TestY installed.
-When running inside TestY, `testy.plugins.hooks` will be importable and the config will be used by TestY.
+When running inside TestY, `testy.plugins.hooks` will be importable and the config will be used by
+TestY.
 
 Implementation is deferred to later tasks in `.agent/queue.md`.
 """
@@ -19,12 +20,12 @@ except Exception:  # pragma: no cover
 
 class ZephyrXmlImporterConfig(TestyPluginConfig):  # type: ignore
     package_name = "zephyr_xml_importer"
-    verbose_name = "Zephyr Scale XML importer"
-    description = "Import Zephyr Scale XML export into TestY"
-    version = "0.1.3"
+    verbose_name = "Zephyr Scale Import/Export"
+    description = "Import Zephyr Scale XML/XLSX into TestY and export TestY to Zephyr Scale XLSX"
+    version = "0.1.4"
     plugin_base_url = "zephyr-xml-importer"
     urls_module = "zephyr_xml_importer.api.urls"
-    index_reverse_name = "import"
+    index_reverse_name = "index"
     min_version = "2.1.2"
 
 
