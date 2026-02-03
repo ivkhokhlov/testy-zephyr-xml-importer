@@ -54,6 +54,37 @@
         color: var(--muted);
       }
 
+      .nav {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        justify-content: flex-end;
+      }
+
+      .nav a {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        text-decoration: none;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 10px 14px;
+        background: #fff;
+        color: var(--text);
+        font-weight: 600;
+      }
+
+      .nav a:hover {
+        border-color: var(--accent);
+        background: var(--accent-weak);
+        color: var(--accent);
+      }
+
+      .nav a:focus {
+        outline: 2px solid var(--accent);
+        outline-offset: 2px;
+      }
+
       .panels {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
@@ -211,6 +242,18 @@
       .hidden {
         display: none;
       }
+
+      @media (max-width: 720px) {
+        .header {
+          flex-direction: column;
+          align-items: flex-start;
+          gap: 12px;
+        }
+
+        .nav {
+          justify-content: flex-start;
+        }
+      }
     </style>
   </head>
   <body>
@@ -219,6 +262,10 @@
         <div>
           <h1>Zephyr Scale XML Importer</h1>
           <p>Import Zephyr Scale XML or XLSX exports into TestY projects.</p>
+        </div>
+        <div class="nav">
+          <a href="../">← Back to Dashboard</a>
+          <a href="../export/">Switch to Export</a>
         </div>
       </header>
 

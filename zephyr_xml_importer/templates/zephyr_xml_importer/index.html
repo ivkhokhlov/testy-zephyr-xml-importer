@@ -99,7 +99,7 @@
       }
 
       .meta {
-        margin-top: 18px;
+        margin-top: 12px;
         color: var(--muted);
         font-size: 12px;
       }
@@ -109,11 +109,7 @@
     <div class="page">
       <header class="header">
         <h1>Zephyr Scale Import/Export</h1>
-        <p>Import Zephyr Scale XML/XLSX into TestY and export TestY to Zephyr Scale XLSX.</p>
-        <div class="nav">
-          <a class="primary" href="import/">Import</a>
-          <a href="export/">Export</a>
-        </div>
+        <p>Choose an action below to get started.</p>
         {% if version %}
           <div class="meta">Version: {{ version }}</div>
         {% endif %}
@@ -127,7 +123,7 @@
             project.
           </p>
           <div class="nav">
-            <a class="primary" href="import/">Open import</a>
+            <a class="primary" href="import/">Start Import</a>
           </div>
         </section>
 
@@ -138,7 +134,7 @@
             labels).
           </p>
           <div class="nav">
-            <a class="primary" href="export/">Open export</a>
+            <a class="primary" href="export/">Start Export</a>
           </div>
         </section>
       </div>

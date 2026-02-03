@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from io import BytesIO
 import importlib
 import mimetypes
 import os
