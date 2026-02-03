@@ -8,6 +8,13 @@
 4) Choose options (dry‑run, meta labels, etc.).
 5) Run import and download CSV report if needed.
 
+### Export UI
+1) Open `/plugins/zephyr-xml-importer/export/`.
+2) Select a project.
+3) Optionally scope by suite id or explicit case ids.
+4) Choose export options (metadata source, key strategy).
+5) Run export and download the XLSX file.
+
 ### API (multipart)
 Endpoint: `/plugins/zephyr-xml-importer/import/`
 
@@ -52,6 +59,33 @@ curl -i \
   -F dry_run=true \
   -F "xml_file=@/path/to/export.xml;type=application/xml" \
   https://<HOST>/plugins/zephyr-xml-importer/import/
+```
+
+### Export API (multipart)
+Endpoint: `/plugins/zephyr-xml-importer/export/`
+
+Fields:
+- `project_id` (required)
+- `suite_id` (optional)
+- `include_children` (default true)
+- `case_ids` (optional, comma-separated list)
+- `strip_zephyr_key_prefix` (default true)
+- `metadata_source` (attributes_then_meta_labels | attributes_only | meta_labels_only)
+- `key_strategy` (existing_only | synthetic)
+
+Example:
+```bash
+curl -i \
+  -H "Authorization: Bearer <ACCESS_TOKEN>" \
+  -F project_id=1 \
+  -F suite_id=10 \
+  -F include_children=true \
+  -F case_ids=101,102,205 \
+  -F strip_zephyr_key_prefix=true \
+  -F metadata_source=attributes_then_meta_labels \
+  -F key_strategy=existing_only \
+  https://<HOST>/plugins/zephyr-xml-importer/export/ \
+  -o zephyr-scale-export.xlsx
 ```
 
 ### Health endpoint
@@ -102,6 +136,13 @@ Failed:
 4) Укажите опции (dry‑run, meta‑labels и т.д.).
 5) Запустите импорт и при необходимости скачайте CSV‑отчёт.
 
+### Экспорт (UI)
+1) Откройте `/plugins/zephyr-xml-importer/export/`.
+2) Выберите проект.
+3) Опционально укажите suite id или список case id.
+4) Выберите опции экспорта (источник метаданных, стратегия ключей).
+5) Запустите экспорт и скачайте XLSX‑файл.
+
 ### API (multipart)
 Эндпоинт: `/plugins/zephyr-xml-importer/import/`
 
@@ -146,6 +187,33 @@ curl -i \
   -F dry_run=true \
   -F "xml_file=@/path/to/export.xml;type=application/xml" \
   https://<HOST>/plugins/zephyr-xml-importer/import/
+```
+
+### Экспорт API (multipart)
+Эндпоинт: `/plugins/zephyr-xml-importer/export/`
+
+Поля:
+- `project_id` (обязательно)
+- `suite_id` (опционально)
+- `include_children` (по умолчанию true)
+- `case_ids` (опционально, список через запятую)
+- `strip_zephyr_key_prefix` (по умолчанию true)
+- `metadata_source` (attributes_then_meta_labels | attributes_only | meta_labels_only)
+- `key_strategy` (existing_only | synthetic)
+
+Пример:
+```bash
+curl -i \
+  -H "Authorization: Bearer <ACCESS_TOKEN>" \
+  -F project_id=1 \
+  -F suite_id=10 \
+  -F include_children=true \
+  -F case_ids=101,102,205 \
+  -F strip_zephyr_key_prefix=true \
+  -F metadata_source=attributes_then_meta_labels \
+  -F key_strategy=existing_only \
+  https://<HOST>/plugins/zephyr-xml-importer/export/ \
+  -o zephyr-scale-export.xlsx
 ```
 
 ### Health‑эндпоинт

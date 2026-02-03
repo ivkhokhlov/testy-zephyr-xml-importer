@@ -1,0 +1,466 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Zephyr Scale XLSX Exporter</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f6f7f9;
+        --panel: #ffffff;
+        --border: #d9dde3;
+        --text: #1f2430;
+        --muted: #5a6270;
+        --accent: #0f6feb;
+        --accent-weak: #e6f0ff;
+        --warn: #d97706;
+        --error: #b42318;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        padding: 0;
+        font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+        background: var(--bg);
+        color: var(--text);
+      }
+
+      .page {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 32px 24px 48px;
+      }
+
+      .header {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        margin-bottom: 24px;
+      }
+
+      .header h1 {
+        margin: 0;
+        font-size: 24px;
+        letter-spacing: 0.2px;
+      }
+
+      .header p {
+        margin: 4px 0 0;
+        color: var(--muted);
+      }
+
+      .panels {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+        gap: 20px;
+      }
+
+      .panel {
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 20px;
+        box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
+      }
+
+      .panel h2 {
+        margin: 0 0 16px;
+        font-size: 18px;
+      }
+
+      .field {
+        margin-bottom: 16px;
+      }
+
+      .field label {
+        display: block;
+        font-weight: 600;
+        margin-bottom: 6px;
+      }
+
+      .field input[type="text"],
+      .field input[type="number"],
+      .field select {
+        width: 100%;
+        padding: 8px 10px;
+        border-radius: 8px;
+        border: 1px solid var(--border);
+        background: #fff;
+        font-size: 14px;
+      }
+
+      .hint {
+        margin-top: 6px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .options {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        gap: 8px 16px;
+      }
+
+      .option {
+        display: flex;
+        align-items: flex-start;
+        gap: 8px;
+        font-size: 14px;
+      }
+
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 12px;
+      }
+
+      button {
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 10px 16px;
+        font-size: 14px;
+        cursor: pointer;
+        background: #fff;
+      }
+
+      button.primary {
+        background: var(--accent);
+        border-color: var(--accent);
+        color: #fff;
+      }
+
+      button:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+      }
+
+      .status {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 12px;
+        font-size: 14px;
+      }
+
+      .status span {
+        padding: 2px 8px;
+        border-radius: 999px;
+        background: var(--accent-weak);
+        color: var(--accent);
+        font-weight: 600;
+      }
+
+      .status span.is-error {
+        background: rgba(180, 35, 24, 0.12);
+        color: var(--error);
+      }
+
+      .status span.is-warn {
+        background: rgba(217, 119, 6, 0.12);
+        color: var(--warn);
+      }
+
+      .errors {
+        background: rgba(180, 35, 24, 0.08);
+        border: 1px solid rgba(180, 35, 24, 0.2);
+        padding: 10px;
+        border-radius: 8px;
+        color: var(--error);
+        font-size: 13px;
+        white-space: pre-wrap;
+      }
+
+      .muted {
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .hidden {
+        display: none;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="page">
+      <header class="header">
+        <div>
+          <h1>Zephyr Scale XLSX Exporter</h1>
+          <p>Export TestY cases to a Zephyr Scale compatible XLSX file.</p>
+        </div>
+      </header>
+
+      <div class="panels">
+        <section class="panel">
+          <h2>Export</h2>
+          <form id="export-form" action="" method="post">
+            {% csrf_token %}
+            <div class="field">
+              <label for="project-select">Project</label>
+              {% if projects %}
+                <select id="project-select" name="project_id" required>
+                  <option value="">Select a project</option>
+                  {% for project in projects %}
+                    <option value="{{ project.id }}">
+                      {{ project.id }} - {{ project.name }}
+                    </option>
+                  {% endfor %}
+                </select>
+              {% else %}
+                <input
+                  id="project-input"
+                  name="project_id"
+                  type="number"
+                  min="1"
+                  placeholder="Project id"
+                  required
+                >
+                <div class="hint">
+                  Project list is unavailable. Enter a project id manually.
+                  {% if project_list_error %}({{ project_list_error }}){% endif %}
+                </div>
+              {% endif %}
+            </div>
+
+            <div class="field">
+              <label for="suite-id">Suite id (optional)</label>
+              <input id="suite-id" name="suite_id" type="number" min="1" placeholder="Suite id">
+              <div class="options">
+                <label class="option">
+                  <input id="include-children" type="checkbox" checked>
+                  Include child suites
+                </label>
+              </div>
+            </div>
+
+            <div class="field">
+              <label for="case-ids">Case ids (optional)</label>
+              <input
+                id="case-ids"
+                name="case_ids"
+                type="text"
+                placeholder="e.g. 101, 102, 205"
+              >
+              <div class="hint">Comma-separated list of TestY case ids.</div>
+            </div>
+
+            <div class="field">
+              <label>Export options</label>
+              <div class="options">
+                <label class="option">
+                  <input id="strip-key-prefix" type="checkbox" checked>
+                  Strip “[KEY] ” prefix from names
+                </label>
+              </div>
+            </div>
+
+            <div class="field">
+              <label for="metadata-source">Metadata source</label>
+              <select id="metadata-source" name="metadata_source">
+                <option value="attributes_then_meta_labels" selected>
+                  Attributes then meta labels
+                </option>
+                <option value="attributes_only">Attributes only</option>
+                <option value="meta_labels_only">Meta labels only</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label for="key-strategy">Key strategy</label>
+              <select id="key-strategy" name="key_strategy">
+                <option value="existing_only" selected>Existing keys only</option>
+                <option value="synthetic">Generate synthetic keys if missing</option>
+              </select>
+            </div>
+
+            <div class="actions">
+              <button class="primary" id="run-btn" type="submit">Export</button>
+              <button type="reset">Reset</button>
+            </div>
+          </form>
+        </section>
+
+        <section class="panel">
+          <h2>Result</h2>
+          <div class="status">
+            <span id="status-pill">Idle</span>
+            <div class="muted" id="status-text">Awaiting export request.</div>
+          </div>
+
+          <div id="errors" class="errors hidden"></div>
+          <div id="result-empty" class="muted">No results yet.</div>
+        </section>
+      </div>
+    </div>
+
+    <script>
+      (function () {
+        const form = document.getElementById("export-form");
+        const runBtn = document.getElementById("run-btn");
+        const statusPill = document.getElementById("status-pill");
+        const statusText = document.getElementById("status-text");
+        const errors = document.getElementById("errors");
+        const emptyResult = document.getElementById("result-empty");
+
+        function setStatus(text, kind, detail) {
+          statusPill.textContent = text;
+          statusPill.classList.remove("is-error", "is-warn");
+          if (kind === "error") {
+            statusPill.classList.add("is-error");
+          } else if (kind === "warn") {
+            statusPill.classList.add("is-warn");
+          }
+          statusText.textContent = detail || "";
+        }
+
+        function clearResult() {
+          errors.classList.add("hidden");
+          errors.textContent = "";
+          emptyResult.classList.remove("hidden");
+        }
+
+        function renderErrors(errorsData) {
+          const message =
+            typeof errorsData === "string"
+              ? errorsData
+              : JSON.stringify(errorsData, null, 2);
+          errors.textContent = message;
+          errors.classList.remove("hidden");
+          emptyResult.classList.add("hidden");
+        }
+
+        function getCookie(name) {
+          const value = `; ${document.cookie}`;
+          const parts = value.split(`; ${name}=`);
+          if (parts.length === 2) {
+            return parts.pop().split(";").shift();
+          }
+          return null;
+        }
+
+        function filenameFromDisposition(headerValue) {
+          if (!headerValue) {
+            return null;
+          }
+          const match = /filename="([^"]+)"/.exec(headerValue);
+          return match ? match[1] : null;
+        }
+
+        async function readResponseBody(response) {
+          const text = await response.text();
+          const contentType = response.headers.get("content-type") || "";
+          const trimmed = text.trim();
+          const looksLikeJson = trimmed.startsWith("{") || trimmed.startsWith("[");
+          if (contentType.includes("application/json") || looksLikeJson) {
+            try {
+              return { data: JSON.parse(text), isJson: true, text };
+            } catch (error) {
+              return { data: null, isJson: false, text, error: String(error) };
+            }
+          }
+          return { data: null, isJson: false, text };
+        }
+
+        function buildNonJsonError(response, bodyText) {
+          const detail = `Non-JSON response (${response.status} ${response.statusText}).`;
+          const trimmed = (bodyText || "").trim();
+          const previewLimit = 4000;
+          const preview =
+            trimmed.length > previewLimit
+              ? `${trimmed.slice(0, previewLimit)}…`
+              : trimmed;
+          return { detail, body: preview };
+        }
+
+        form.addEventListener("submit", async (event) => {
+          event.preventDefault();
+          runBtn.disabled = true;
+          clearResult();
+          setStatus("Running", "warn", "Submitting export request...");
+
+          const formData = new FormData();
+          const projectSelect = document.getElementById("project-select");
+          const projectInput = document.getElementById("project-input");
+          const projectId = projectSelect
+            ? projectSelect.value
+            : projectInput
+            ? projectInput.value
+            : "";
+          formData.set("project_id", projectId);
+
+          const suiteId = document.getElementById("suite-id").value;
+          if (suiteId) {
+            formData.set("suite_id", suiteId);
+          }
+
+          formData.set(
+            "include_children",
+            document.getElementById("include-children").checked ? "true" : "false"
+          );
+
+          const caseIds = document.getElementById("case-ids").value;
+          if (caseIds) {
+            formData.set("case_ids", caseIds);
+          }
+
+          formData.set(
+            "strip_zephyr_key_prefix",
+            document.getElementById("strip-key-prefix").checked ? "true" : "false"
+          );
+          formData.set("metadata_source", document.getElementById("metadata-source").value);
+          formData.set("key_strategy", document.getElementById("key-strategy").value);
+
+          const csrfToken = getCookie("csrftoken");
+          const headers = {};
+          if (csrfToken) {
+            headers["X-CSRFToken"] = csrfToken;
+          }
+
+          try {
+            const response = await fetch(form.action || window.location.href, {
+              method: "POST",
+              credentials: "same-origin",
+              headers,
+              body: formData
+            });
+
+            const contentType = response.headers.get("content-type") || "";
+            if (response.ok && !contentType.includes("application/json")) {
+              const blob = await response.blob();
+              const url = URL.createObjectURL(blob);
+              const link = document.createElement("a");
+              link.href = url;
+              link.download =
+                filenameFromDisposition(response.headers.get("content-disposition")) ||
+                "zephyr-scale-export.xlsx";
+              document.body.appendChild(link);
+              link.click();
+              link.remove();
+              URL.revokeObjectURL(url);
+              setStatus("Success", "", "Export completed. Download started.");
+              emptyResult.classList.add("hidden");
+            } else {
+              const parsed = await readResponseBody(response);
+              setStatus("Failed", "error", "Export failed.");
+              if (parsed.data) {
+                renderErrors(parsed.data.errors || parsed.data);
+              } else {
+                renderErrors(buildNonJsonError(response, parsed.text));
+              }
+            }
+          } catch (error) {
+            setStatus("Failed", "error", "Request failed.");
+            renderErrors({ detail: String(error) });
+          } finally {
+            runBtn.disabled = false;
+          }
+        });
+      })();
+    </script>
+  </body>
+</html>

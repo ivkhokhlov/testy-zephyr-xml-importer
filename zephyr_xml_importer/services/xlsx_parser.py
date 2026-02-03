@@ -288,13 +288,14 @@ def iter_test_cases_xlsx(source: str | Path | BinaryIO | bytes) -> Iterator[Zeph
                 continue
 
             key_value = _coerce_text(_row_value(row_tuple, header_index.get(HEADER_KEY)))
-            if key_value:
+            name_value = _coerce_text(_row_value(row_tuple, header_index.get(HEADER_NAME)))
+            if key_value or name_value:
                 if current is not None:
                     yield current.to_test_case()
 
                 current = _XlsxCaseBuilder(
                     key=key_value,
-                    name=_coerce_text(_row_value(row_tuple, header_index.get(HEADER_NAME))),
+                    name=name_value,
                     status=_coerce_text(_row_value(row_tuple, header_index.get(HEADER_STATUS))),
                     precondition=_coerce_text(
                         _row_value(row_tuple, header_index.get(HEADER_PRECONDITION))

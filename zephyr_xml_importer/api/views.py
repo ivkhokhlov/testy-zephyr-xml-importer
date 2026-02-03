@@ -3,15 +3,28 @@ from __future__ import annotations
 from typing import Any, Mapping
 
 from .permissions import IsAdminForZephyrImport
-from .serializers import ImportRequestData, ImportValidationError, validate_import_request
+from .serializers import (
+    ExportRequestData,
+    ExportValidationError,
+    ImportRequestData,
+    ImportValidationError,
+    validate_export_request,
+    validate_import_request,
+)
 from .. import __version__
 from ..services.importer import DryRunImportResult, dry_run_import, import_into_testy
+from ..services.testy_exporter import export_testy_cases_to_xlsx
 from ..services.testy_adapter import TestyAdapterError, load_project_choices
 
 try:
     from django.shortcuts import render
 except Exception:  # pragma: no cover - Django optional for unit tests
     render = None
+
+try:
+    from django.http import HttpResponse
+except Exception:  # pragma: no cover - Django optional for unit tests
+    HttpResponse = None
 
 try:
     from rest_framework.response import Response
@@ -25,9 +38,10 @@ except Exception:  # pragma: no cover - DRF optional for unit tests
     DrfValidationError = None
 
 try:
-    from .serializers import ImportRequestSerializer
+    from .serializers import ExportRequestSerializer, ImportRequestSerializer
 except Exception:  # pragma: no cover
     ImportRequestSerializer = None
+    ExportRequestSerializer = None
 
 
 def _normalize_value(value: Any) -> Any:
@@ -94,6 +108,16 @@ def _error_response(errors: Any, payload: Mapping[str, Any]) -> Any:
     return Response(response, status=drf_status.HTTP_400_BAD_REQUEST)
 
 
+def _export_error_response(errors: Any) -> Any:
+    response = {
+        "status": "failed",
+        "errors": errors,
+    }
+    if Response is None:
+        return response
+    return Response(response, status=drf_status.HTTP_400_BAD_REQUEST)
+
+
 def _build_response_from_result(result: DryRunImportResult, *, dry_run: bool) -> dict[str, Any]:
     return {
         "status": "success",
@@ -154,6 +178,27 @@ def handle_import_request(data: Mapping[str, Any]) -> dict[str, Any]:
     return build_import_response(request_data)
 
 
+def build_export_response(
+    request_data: ExportRequestData, *, user: Any | None = None
+) -> tuple[bytes, str]:
+    result = export_testy_cases_to_xlsx(
+        project_id=request_data.project_id,
+        suite_id=request_data.suite_id,
+        include_children=request_data.include_children,
+        case_ids=request_data.case_ids,
+        strip_zephyr_key_prefix=request_data.strip_zephyr_key_prefix,
+        metadata_source=request_data.metadata_source,
+        key_strategy=request_data.key_strategy,
+    )
+    filename = _build_export_filename(request_data.project_id)
+    return result.content, filename
+
+
+def handle_export_request(data: Mapping[str, Any]) -> tuple[bytes, str]:
+    request_data = validate_export_request(data)
+    return build_export_response(request_data)
+
+
 def build_health_payload() -> dict[str, Any]:
     return {
         "status": "ok",
@@ -212,6 +257,66 @@ class ImportView(APIView):  # type: ignore[misc]
         return Response(response_data, status=status_code)
 
 
+class ExportView(APIView):  # type: ignore[misc]
+    permission_classes = [IsAdminForZephyrImport]
+
+    def get(self, request, *args, **kwargs):  # type: ignore[override]
+        projects: list[Any] | None = None
+        project_list_error: str | None = None
+        try:
+            projects, project_list_error = load_project_choices()
+        except Exception as exc:  # pragma: no cover - depends on TestY runtime
+            projects = None
+            project_list_error = str(exc)
+
+        context = {
+            "projects": projects,
+            "project_list_error": project_list_error,
+        }
+        if render is None:
+            return {
+                "status": "failed",
+                "errors": {"detail": "HTML UI is unavailable in this environment"},
+            }
+        return render(request, "zephyr_xml_importer/export.html", context)
+
+    def post(self, request, *args, **kwargs):  # type: ignore[override]
+        payload = _extract_payload(request)
+        try:
+            if ExportRequestSerializer is not None:
+                serializer = ExportRequestSerializer(data=payload)
+                serializer.is_valid(raise_exception=True)
+                request_data = validate_export_request(serializer.validated_data)
+            else:
+                request_data = validate_export_request(payload)
+        except ExportValidationError as exc:
+            return _export_error_response(exc.errors)
+        except Exception as exc:
+            if DrfValidationError is not None and isinstance(exc, DrfValidationError):
+                return _export_error_response(exc.detail)
+            return _export_error_response({"detail": str(exc)})
+
+        try:
+            content, filename = build_export_response(
+                request_data,
+                user=getattr(request, "user", None),
+            )
+        except TestyAdapterError as exc:
+            return _export_error_response({"detail": str(exc)})
+
+        if HttpResponse is None:
+            return {"status": "success", "filename": filename, "content": content}
+
+        response = HttpResponse(
+            content,
+            content_type=(
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            ),
+        )
+        response["Content-Disposition"] = f'attachment; filename="{filename}"'
+        return response
+
+
 class HealthView(APIView):  # type: ignore[misc]
     permission_classes = [IsAdminForZephyrImport]
 
@@ -220,3 +325,16 @@ class HealthView(APIView):  # type: ignore[misc]
         if Response is None:
             return payload
         return Response(payload, status=drf_status.HTTP_200_OK)
+
+
+def _build_export_filename(project_id: int) -> str:
+    try:
+        from datetime import datetime, timezone
+
+        now = datetime.now(timezone.utc)
+    except Exception:  # pragma: no cover - fallback for limited env
+        from datetime import datetime
+
+        now = datetime.utcnow()
+    date_str = now.strftime("%Y%m%d")
+    return f"zephyr-scale-export-project-{project_id}-{date_str}.xlsx"
