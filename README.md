@@ -96,4 +96,4 @@ pytest -q
 - `docs/deployment.md`
 - `docs/troubleshooting.md`
 
-Version: 0.1.2
+Version: 0.1.3

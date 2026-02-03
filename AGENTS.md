@@ -26,6 +26,7 @@
 
 ## Commit & Pull Request Guidelines
 - Commit messages are short and imperative. The history mixes plain summaries with Conventional Commits (`feat:`, `fix:`); prefer the Conventional Commit style for user-facing changes.
+- For user-facing changes, bump the version in `pyproject.toml`, `zephyr_xml_importer/__init__.py`, `zephyr_xml_importer/hooks.py`, and `README.md` before committing.
 - PRs should include a clear description, test results (e.g., `pytest -q`), and doc updates in `docs/` when behavior changes. Include screenshots if you modify the HTML UI.
 
 ## Configuration & Security Notes
