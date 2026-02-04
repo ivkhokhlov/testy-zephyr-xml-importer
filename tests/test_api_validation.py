@@ -2,7 +2,12 @@ from pathlib import Path
 
 import pytest
 
-from zephyr_xml_importer.api.serializers import ImportValidationError, validate_import_request
+from zephyr_xml_importer.api.serializers import (
+    ExportValidationError,
+    ImportValidationError,
+    validate_export_request,
+    validate_import_request,
+)
 from zephyr_xml_importer.api.views import handle_import_request
 
 
@@ -66,3 +71,25 @@ def test_handle_import_request_dry_run_response():
         "failed": 0,
     }
     assert "ES-T560" in response["report_csv"]
+
+
+def test_validate_export_request_parses_suite_ids_and_precedence():
+    data = {
+        "project_id": 7,
+        "suite_ids": "10, 12, 10, 15",
+        "suite_id": "99",
+    }
+    request = validate_export_request(data)
+    assert request.suite_ids == [10, 12, 15]
+    assert request.suite_id is None
+
+
+def test_validate_export_request_rejects_invalid_suite_ids():
+    with pytest.raises(ExportValidationError) as excinfo:
+        validate_export_request({"project_id": 1, "suite_ids": "nope,2"})
+    assert "suite_ids" in excinfo.value.errors
+
+
+def test_validate_export_request_empty_suite_ids_ignored():
+    request = validate_export_request({"project_id": 3, "suite_ids": ""})
+    assert request.suite_ids is None

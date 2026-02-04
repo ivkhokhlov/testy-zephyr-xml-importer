@@ -30,6 +30,7 @@ class ImportRequestData:
 class ExportRequestData:
     project_id: int
     suite_id: int | None
+    suite_ids: list[int] | None
     include_children: bool
     case_ids: list[int] | None
     strip_zephyr_key_prefix: bool
@@ -177,9 +178,40 @@ def validate_export_request(data: Mapping[str, Any]) -> ExportRequestData:
     if project_id is not None and project_id <= 0:
         errors["project_id"] = "project_id must be positive"
 
+    suite_ids_raw = _unwrap(data.get("suite_ids"))
+    suite_ids: list[int] | None = None
+    if suite_ids_raw not in (None, ""):
+        suite_ids = []
+        if isinstance(suite_ids_raw, str):
+            tokens = [t for t in suite_ids_raw.replace(";", ",").split(",") if t.strip()]
+            values: list[str | int] = tokens
+        elif isinstance(suite_ids_raw, (list, tuple, set)):
+            values = list(suite_ids_raw)
+        else:
+            values = [suite_ids_raw]
+        for item in values:
+            if isinstance(item, int):
+                value = item
+            elif isinstance(item, str) and item.strip().isdigit():
+                value = int(item.strip())
+            else:
+                errors["suite_ids"] = (
+                    "suite_ids must be a list of integers or comma-separated string"
+                )
+                break
+            if value <= 0:
+                errors["suite_ids"] = "suite_ids must contain positive integers"
+                break
+            suite_ids.append(value)
+        if suite_ids:
+            seen: set[int] = set()
+            suite_ids = [sid for sid in suite_ids if not (sid in seen or seen.add(sid))]
+        else:
+            suite_ids = None
+
     suite_id_raw = _unwrap(data.get("suite_id"))
     suite_id: int | None = None
-    if suite_id_raw not in (None, ""):
+    if suite_ids is None and suite_id_raw not in (None, ""):
         if isinstance(suite_id_raw, int):
             suite_id = suite_id_raw
         elif isinstance(suite_id_raw, str) and suite_id_raw.strip().isdigit():
@@ -261,6 +293,7 @@ def validate_export_request(data: Mapping[str, Any]) -> ExportRequestData:
     return ExportRequestData(
         project_id=project_id or 0,
         suite_id=suite_id,
+        suite_ids=suite_ids,
         include_children=include_children,
         case_ids=case_ids,
         strip_zephyr_key_prefix=strip_zephyr_key_prefix,
@@ -295,12 +328,9 @@ if serializers:  # pragma: no cover - DRF optional for unit tests
     class ExportRequestSerializer(serializers.Serializer):
         project_id = serializers.IntegerField()
         suite_id = serializers.IntegerField(required=False, allow_null=True)
+        suite_ids = serializers.CharField(required=False, allow_blank=True)
         include_children = serializers.BooleanField(required=False, default=True)
-        case_ids = serializers.ListField(
-            child=serializers.IntegerField(),
-            required=False,
-            allow_empty=True,
-        )
+        case_ids = serializers.CharField(required=False, allow_blank=True)
         strip_zephyr_key_prefix = serializers.BooleanField(required=False, default=True)
         metadata_source = serializers.ChoiceField(
             required=False,

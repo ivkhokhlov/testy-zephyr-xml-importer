@@ -13,7 +13,7 @@ from .serializers import (
 )
 from .. import __version__
 from ..services.importer import DryRunImportResult, dry_run_import, import_into_testy
-from ..services.testy_exporter import export_testy_cases_to_xlsx
+from ..services.testy_exporter import export_testy_cases_to_xlsx, list_project_suites
 from ..services.testy_adapter import TestyAdapterError, load_project_choices
 
 try:
@@ -184,6 +184,7 @@ def build_export_response(
     result = export_testy_cases_to_xlsx(
         project_id=request_data.project_id,
         suite_id=request_data.suite_id,
+        suite_ids=request_data.suite_ids,
         include_children=request_data.include_children,
         case_ids=request_data.case_ids,
         strip_zephyr_key_prefix=request_data.strip_zephyr_key_prefix,
@@ -198,6 +199,51 @@ def build_export_response(
 def handle_export_request(data: Mapping[str, Any]) -> tuple[bytes, str]:
     request_data = validate_export_request(data)
     return build_export_response(request_data)
+
+
+def handle_suites_request(data: Mapping[str, Any]) -> dict[str, Any]:
+    project_id_raw = _normalize_value(data.get("project_id"))
+    if project_id_raw is None or project_id_raw == "":
+        return {
+            "status": "failed",
+            "errors": {"project_id": "project_id is required"},
+        }
+    if isinstance(project_id_raw, int):
+        project_id = project_id_raw
+    elif isinstance(project_id_raw, str) and project_id_raw.strip().isdigit():
+        project_id = int(project_id_raw.strip())
+    else:
+        return {
+            "status": "failed",
+            "errors": {"project_id": "project_id must be an integer"},
+        }
+    if project_id <= 0:
+        return {
+            "status": "failed",
+            "errors": {"project_id": "project_id must be positive"},
+        }
+
+    try:
+        suites = list_project_suites(project_id=project_id)
+    except TestyAdapterError as exc:
+        return {
+            "status": "failed",
+            "errors": {"detail": str(exc)},
+        }
+
+    suite_payload = [
+        {
+            "id": info.suite_id,
+            "name": info.name,
+            "parent_id": info.parent_id,
+            "description": info.description,
+        }
+        for info in suites
+    ]
+    return {
+        "status": "success",
+        "suites": suite_payload,
+    }
 
 
 def build_health_payload() -> dict[str, Any]:
@@ -331,6 +377,27 @@ class ExportView(APIView):  # type: ignore[misc]
         )
         response["Content-Disposition"] = f'attachment; filename="{filename}"'
         return response
+
+
+class SuitesView(APIView):  # type: ignore[misc]
+    permission_classes = [IsAdminForZephyrImport]
+
+    def get(self, request, *args, **kwargs):  # type: ignore[override]
+        params = getattr(request, "query_params", None)
+        if params is None:
+            params = getattr(request, "GET", None)
+        if params is None:
+            params = {}
+
+        response_data = handle_suites_request(params)
+        if Response is None:
+            return response_data
+        status_code = (
+            drf_status.HTTP_200_OK
+            if response_data.get("status") == "success"
+            else drf_status.HTTP_400_BAD_REQUEST
+        )
+        return Response(response_data, status=status_code)
 
 
 class HealthView(APIView):  # type: ignore[misc]

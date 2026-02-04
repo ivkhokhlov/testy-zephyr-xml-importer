@@ -32,7 +32,7 @@ pytest -q
 - Health: `/plugins/zephyr-xml-importer/health/`
 
 ### API (multipart)
-Fields:
+Import fields:
 - `project_id` (required)
 - `xml_file` (required, XML or XLSX)
 - `attachments_zip` (optional)
@@ -43,11 +43,25 @@ Fields:
 - `embed_testdata_to_description` (default true)
 - `on_duplicate` (skip|upsert, default skip)
 
+Export fields:
+- `project_id` (required)
+- `suite_ids` (optional, comma-separated list of suite ids)
+- `suite_id` (optional)
+- `include_children` (default true, used with `suite_id`)
+- `case_ids` (optional, comma-separated list)
+- `strip_zephyr_key_prefix` (default true)
+- `metadata_source` (attributes_then_meta_labels | attributes_only | meta_labels_only)
+- `key_strategy` (existing_only | synthetic)
+- `include_extra_testy_fields` (default false, adds `Step Name` column)
+
+Note: when `suite_ids` is provided, it takes precedence over `suite_id`.
+
 ### Docs
 See:
 - `docs/overview.md`
 - `docs/usage.md`
 - `docs/mapping.md`
+- `docs/requirements-traceability.md`
 - `docs/deployment.md`
 - `docs/troubleshooting.md`
 
@@ -85,7 +99,7 @@ pytest -q
 - Health: `/plugins/zephyr-xml-importer/health/`
 
 ### API (multipart)
-Поля:
+Поля импорта:
 - `project_id` (обязательно)
 - `xml_file` (обязательно, XML или XLSX)
 - `attachments_zip` (опционально)
@@ -96,12 +110,26 @@ pytest -q
 - `embed_testdata_to_description` (по умолчанию true)
 - `on_duplicate` (skip|upsert, по умолчанию skip)
 
+Поля экспорта:
+- `project_id` (обязательно)
+- `suite_ids` (опционально, список suite id через запятую)
+- `suite_id` (опционально)
+- `include_children` (по умолчанию true, используется с `suite_id`)
+- `case_ids` (опционально, список через запятую)
+- `strip_zephyr_key_prefix` (по умолчанию true)
+- `metadata_source` (attributes_then_meta_labels | attributes_only | meta_labels_only)
+- `key_strategy` (existing_only | synthetic)
+- `include_extra_testy_fields` (по умолчанию false, добавляет колонку `Step Name`)
+
+Примечание: при наличии `suite_ids` поле `suite_id` игнорируется.
+
 ### Документация
 См.:
 - `docs/overview.md`
 - `docs/usage.md`
 - `docs/mapping.md`
+- `docs/requirements-traceability.md`
 - `docs/deployment.md`
 - `docs/troubleshooting.md`
 
-Version: 0.1.6
+Version: 0.1.7

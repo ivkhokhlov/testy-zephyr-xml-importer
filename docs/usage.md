@@ -14,7 +14,7 @@
 ### Export UI
 1) Open `/plugins/zephyr-xml-importer/export/`.
 2) Select a project.
-3) Optionally scope by suite id or explicit case ids.
+3) Optionally select suites in the tree (includes child suites) or specify case ids.
 4) Choose export options (metadata source, key strategy, extra TestY fields).
 5) Run export and download the XLSX file.
 
@@ -69,13 +69,16 @@ Endpoint: `/plugins/zephyr-xml-importer/export/`
 
 Fields:
 - `project_id` (required)
+- `suite_ids` (optional, comma-separated list of suite ids)
 - `suite_id` (optional)
-- `include_children` (default true)
+- `include_children` (default true, used with `suite_id`)
 - `case_ids` (optional, comma-separated list)
 - `strip_zephyr_key_prefix` (default true)
 - `metadata_source` (attributes_then_meta_labels | attributes_only | meta_labels_only)
 - `key_strategy` (existing_only | synthetic)
 - `include_extra_testy_fields` (default false, adds `Step Name` column)
+
+Note: when `suite_ids` is provided, it takes precedence over `suite_id`.
 
 Example:
 ```bash
@@ -147,7 +150,7 @@ Failed:
 ### Экспорт (UI)
 1) Откройте `/plugins/zephyr-xml-importer/export/`.
 2) Выберите проект.
-3) Опционально укажите suite id или список case id.
+3) Опционально выберите suites в дереве (с включением дочерних) либо укажите case ids.
 4) Выберите опции экспорта (источник метаданных, стратегия ключей, доп. поля TestY).
 5) Запустите экспорт и скачайте XLSX‑файл.
 
@@ -202,13 +205,16 @@ curl -i \
 
 Поля:
 - `project_id` (обязательно)
+- `suite_ids` (опционально, список suite id через запятую)
 - `suite_id` (опционально)
-- `include_children` (по умолчанию true)
+- `include_children` (по умолчанию true, используется с `suite_id`)
 - `case_ids` (опционально, список через запятую)
 - `strip_zephyr_key_prefix` (по умолчанию true)
 - `metadata_source` (attributes_then_meta_labels | attributes_only | meta_labels_only)
 - `key_strategy` (existing_only | synthetic)
 - `include_extra_testy_fields` (по умолчанию false, добавляет колонку `Step Name`)
+
+Примечание: при наличии `suite_ids` поле `suite_id` игнорируется.
 
 Пример:
 ```bash

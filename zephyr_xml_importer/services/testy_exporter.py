@@ -35,6 +35,7 @@ def export_testy_cases_to_xlsx(
     *,
     project_id: int,
     suite_id: int | None = None,
+    suite_ids: list[int] | None = None,
     include_children: bool = True,
     case_ids: list[int] | None = None,
     strip_zephyr_key_prefix: bool = True,
@@ -45,6 +46,7 @@ def export_testy_cases_to_xlsx(
     export_cases = collect_testy_cases_for_export(
         project_id=project_id,
         suite_id=suite_id,
+        suite_ids=suite_ids,
         include_children=include_children,
         case_ids=case_ids,
         strip_zephyr_key_prefix=strip_zephyr_key_prefix,
@@ -59,10 +61,34 @@ def export_testy_cases_to_xlsx(
     return result
 
 
+def list_project_suites(*, project_id: int) -> list[SuiteInfo]:
+    project_model = _resolve_project_model()
+    if project_model is None:
+        raise TestyAdapterError("Project model is not available")
+    if not project_model.objects.filter(id=project_id).exists():
+        raise TestyAdapterError(f"Project {project_id} does not exist")
+
+    suite_model = _resolve_model("TestSuite", SUITE_MODEL_CANDIDATES)
+    if suite_model is None:
+        raise TestyAdapterError("TestSuite model is not available")
+
+    suites = list(
+        suite_model.objects.filter(project_id=project_id).values(
+            "id",
+            "name",
+            "parent_id",
+            "description",
+        )
+    )
+    suite_index = _build_suite_index(suites)
+    return list(suite_index.values())
+
+
 def collect_testy_cases_for_export(
     *,
     project_id: int,
     suite_id: int | None,
+    suite_ids: list[int] | None,
     include_children: bool,
     case_ids: list[int] | None,
     strip_zephyr_key_prefix: bool,
@@ -102,6 +128,7 @@ def collect_testy_cases_for_export(
         suite_model=suite_model,
         project_id=project_id,
         suite_id=suite_id,
+        suite_ids=suite_ids,
         include_children=include_children,
         suite_index=suite_index,
     )
@@ -143,9 +170,22 @@ def _select_suite_ids(
     suite_model: type,
     project_id: int,
     suite_id: int | None,
+    suite_ids: list[int] | None,
     include_children: bool,
     suite_index: dict[int, SuiteInfo],
 ) -> list[int] | None:
+    if suite_ids:
+        missing = [suite_id for suite_id in suite_ids if suite_id not in suite_index]
+        if missing:
+            missing_str = ", ".join(str(suite_id) for suite_id in missing)
+            raise TestyAdapterError(
+                f"Suites not found in project {project_id}: {missing_str}"
+            )
+        seen: set[int] = set()
+        return [
+            suite_id for suite_id in suite_ids if not (suite_id in seen or seen.add(suite_id))
+        ]
+
     if suite_id is None:
         return None
     if suite_id not in suite_index:
