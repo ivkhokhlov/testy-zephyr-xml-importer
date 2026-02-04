@@ -9,17 +9,13 @@
 2) Select a project.
 3) Upload XML or XLSX file and optional ZIP.
 4) Choose options (dry‑run, meta labels, etc.).
-5) (Optional) Configure step titles:
-   - `step_name_template` (template string), and/or
-   - `step_name_overrides` (CSV/JSON file).
-   - If the XLSX contains a `TestY Step Names` worksheet (plugin export), it is used automatically.
-6) Run import and download CSV report if needed.
+5) Run import and download CSV report if needed.
 
 ### Export UI
 1) Open `/plugins/zephyr-xml-importer/export/`.
 2) Select a project.
 3) Optionally scope by suite id or explicit case ids.
-4) Choose export options (metadata source, key strategy, include step titles).
+4) Choose export options (metadata source, key strategy).
 5) Run export and download the XLSX file.
 
 ### API (multipart)
@@ -34,8 +30,6 @@ Fields:
 - `meta_labels` (default true)
 - `append_jira_issues_to_description` (default true)
 - `embed_testdata_to_description` (default true)
-- `step_name_template` (optional; e.g. `{index}. {description}`)
-- `step_name_overrides` (optional; CSV/JSON file with explicit step titles)
 - `on_duplicate` (skip|upsert, default skip)
 
 Example with JWT:
@@ -81,7 +75,6 @@ Fields:
 - `strip_zephyr_key_prefix` (default true)
 - `metadata_source` (attributes_then_meta_labels | attributes_only | meta_labels_only)
 - `key_strategy` (existing_only | synthetic)
-- `include_step_names` (default false; adds `TestY Step Names` worksheet)
 
 Example:
 ```bash
@@ -92,7 +85,6 @@ curl -i \
   -F include_children=true \
   -F case_ids=101,102,205 \
   -F strip_zephyr_key_prefix=true \
-  -F include_step_names=true \
   -F metadata_source=attributes_then_meta_labels \
   -F key_strategy=existing_only \
   https://<HOST>/plugins/zephyr-xml-importer/export/ \
@@ -148,17 +140,13 @@ Failed:
 2) Выберите проект.
 3) Загрузите XML или XLSX и опциональный ZIP.
 4) Укажите опции (dry‑run, meta‑labels и т.д.).
-5) (Опционально) Настройте названия шагов:
-   - `step_name_template` (строка‑шаблон), и/или
-   - `step_name_overrides` (CSV/JSON файл).
-   - Если в XLSX есть лист `TestY Step Names` (экспорт плагина), он используется автоматически.
-6) Запустите импорт и при необходимости скачайте CSV‑отчёт.
+5) Запустите импорт и при необходимости скачайте CSV‑отчёт.
 
 ### Экспорт (UI)
 1) Откройте `/plugins/zephyr-xml-importer/export/`.
 2) Выберите проект.
 3) Опционально укажите suite id или список case id.
-4) Выберите опции экспорта (источник метаданных, стратегия ключей, названия шагов).
+4) Выберите опции экспорта (источник метаданных, стратегия ключей).
 5) Запустите экспорт и скачайте XLSX‑файл.
 
 ### API (multipart)
@@ -173,8 +161,6 @@ Failed:
 - `meta_labels` (по умолчанию true)
 - `append_jira_issues_to_description` (по умолчанию true)
 - `embed_testdata_to_description` (по умолчанию true)
-- `step_name_template` (опционально; например `{index}. {description}`)
-- `step_name_overrides` (опционально; CSV/JSON файл с явными названиями шагов)
 - `on_duplicate` (skip|upsert, по умолчанию skip)
 
 Пример с JWT:
@@ -220,7 +206,6 @@ curl -i \
 - `strip_zephyr_key_prefix` (по умолчанию true)
 - `metadata_source` (attributes_then_meta_labels | attributes_only | meta_labels_only)
 - `key_strategy` (existing_only | synthetic)
-- `include_step_names` (по умолчанию false; добавляет лист `TestY Step Names`)
 
 Пример:
 ```bash
@@ -231,7 +216,6 @@ curl -i \
   -F include_children=true \
   -F case_ids=101,102,205 \
   -F strip_zephyr_key_prefix=true \
-  -F include_step_names=true \
   -F metadata_source=attributes_then_meta_labels \
   -F key_strategy=existing_only \
   https://<HOST>/plugins/zephyr-xml-importer/export/ \

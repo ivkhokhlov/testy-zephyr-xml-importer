@@ -37,19 +37,9 @@ XLSX_HEADERS: list[str] = [
     "Test Script (BDD)",
 ]
 
-STEP_NAME_SHEET_TITLE = "TestY Step Names"
-STEP_NAME_HEADERS: list[str] = [
-    "Key",
-    "Case ID",
-    "Step Sort Order",
-    "Step Name",
-]
-
 
 @dataclass(frozen=True, slots=True)
 class ExportStep:
-    sort_order: int | None = None
-    name: str | None = None
     description: str | None = None
     test_data: str | None = None
     expected_result: str | None = None
@@ -80,11 +70,7 @@ class XlsxExportResult:
     warnings: list[str] = field(default_factory=list)
 
 
-def build_xlsx_export(
-    cases: Iterable[ExportCase],
-    *,
-    include_step_names: bool = False,
-) -> XlsxExportResult:
+def build_xlsx_export(cases: Iterable[ExportCase]) -> XlsxExportResult:
     if openpyxl is None:  # pragma: no cover - should be installed via dependencies
         raise RuntimeError("openpyxl is required to export Zephyr XLSX files") from _OPENPYXL_ERROR
 
@@ -93,21 +79,10 @@ def build_xlsx_export(
     worksheet = workbook.create_sheet(title="Test Cases")
     worksheet.append(list(XLSX_HEADERS))
 
-    step_name_sheet = None
-    if include_step_names:
-        step_name_sheet = workbook.create_sheet(title=STEP_NAME_SHEET_TITLE)
-        step_name_sheet.append(list(STEP_NAME_HEADERS))
-
     for case in cases:
         _collect_case_warnings(case, warnings)
         for row_values, step_index in _iter_case_rows(case):
             worksheet.append(_truncate_row(row_values, case, warnings, step_index))
-        if step_name_sheet is not None and case.steps:
-            if not (case.key or "").strip():
-                warnings.append(_format_case_warning(case, "Missing key for step-name metadata sheet"))
-            for idx, step in enumerate(case.steps):
-                sort_order = step.sort_order if step.sort_order is not None else idx
-                _append_step_name_row(step_name_sheet, case, sort_order, step, warnings)
 
     buffer = BytesIO()
     workbook.save(buffer)
@@ -233,36 +208,3 @@ def _truncate_cell(
         warning = f"{warning} (step {step_index})"
     warnings.append(warning)
     return trimmed
-
-
-def _append_step_name_row(
-    sheet: object,
-    case: ExportCase,
-    sort_order: int,
-    step: ExportStep,
-    warnings: list[str],
-) -> None:
-    key = (case.key or "").strip() or None
-    case_id = case.case_id
-    name = (step.name or "").strip()
-
-    if not name:
-        warnings.append(_format_case_warning(case, f"Empty step name for sort_order {sort_order}"))
-        name_value: str | None = None
-    else:
-        max_length = 255
-        if len(name) > max_length:
-            warnings.append(
-                _format_case_warning(
-                    case,
-                    f"Step name too long ({len(name)} > {max_length}); truncating",
-                )
-            )
-            name = name[:max_length]
-        name_value = name
-
-    row = [key, case_id, sort_order, name_value]
-    try:
-        sheet.append(row)
-    except Exception:  # pragma: no cover - defensive for openpyxl differences
-        return

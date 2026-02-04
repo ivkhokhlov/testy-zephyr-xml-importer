@@ -151,8 +151,6 @@ def build_import_response(
                 meta_labels=request_data.meta_labels,
                 append_jira_issues_to_description=request_data.append_jira_issues_to_description,
                 embed_testdata_to_description=request_data.embed_testdata_to_description,
-                step_name_template=request_data.step_name_template,
-                step_name_overrides=request_data.step_name_overrides,
             )
         else:
             result = import_into_testy(
@@ -163,8 +161,6 @@ def build_import_response(
                 meta_labels=request_data.meta_labels,
                 append_jira_issues_to_description=request_data.append_jira_issues_to_description,
                 embed_testdata_to_description=request_data.embed_testdata_to_description,
-                step_name_template=request_data.step_name_template,
-                step_name_overrides=request_data.step_name_overrides,
                 on_duplicate=request_data.on_duplicate,
                 user=user,
             )
@@ -193,7 +189,6 @@ def build_export_response(
         strip_zephyr_key_prefix=request_data.strip_zephyr_key_prefix,
         metadata_source=request_data.metadata_source,
         key_strategy=request_data.key_strategy,
-        include_step_names=request_data.include_step_names,
     )
     filename = _build_export_filename(request_data.project_id)
     return result.content, filename

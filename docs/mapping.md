@@ -17,13 +17,7 @@
 - Always stores full Zephyr metadata in `attributes.zephyr`.
 
 ### Steps
-- `sort_order` = step index.
-- `name` resolution (precedence):
-  1) Overrides (uploaded `step_name_overrides`, or `TestY Step Names` sheet when importing XLSX).
-  2) `step_name_template` (optional).
-  3) Default: `Step {index+1}`.
-- Template variables: `{index}`, `{index0}`, `{key}`, `{case_name}`, `{description}`, `{expected}`.
-- Export (`include_step_names=true`) adds a `TestY Step Names` worksheet that the importer can read.
+- `sort_order` = step index, `name` = `Step {index+1}`.
 - `scenario` = description + testData (if present).
 - `expected` = expectedResult (sanitized).
 - If scenario is empty, a placeholder is used and a warning is emitted.
@@ -63,13 +57,7 @@
 - Всегда сохраняются метаданные в `attributes.zephyr`.
 
 ### Шаги
-- `sort_order` = индекс шага.
-- Разрешение `name` (приоритет):
-  1) Overrides (загруженный `step_name_overrides` или лист `TestY Step Names` при импорте XLSX).
-  2) `step_name_template` (опционально).
-  3) По умолчанию: `Step {index+1}`.
-- Переменные шаблона: `{index}`, `{index0}`, `{key}`, `{case_name}`, `{description}`, `{expected}`.
-- Экспорт (`include_step_names=true`) добавляет лист `TestY Step Names`, который импортер умеет читать.
+- `sort_order` = индекс шага, `name` = `Step {index+1}`.
 - `scenario` = description + testData (если есть).
 - `expected` = expectedResult (санитайз).
 - Если сценарий пустой — ставится заглушка и выдаётся предупреждение.
