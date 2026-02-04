@@ -35,11 +35,13 @@ def test_export_xlsx_roundtrip(tmp_path: Path) -> None:
             issues=["ES-1", "ES-2"],
             steps=[
                 ExportStep(
+                    title="Open login",
                     description="Open page",
                     test_data="user=admin",
                     expected_result="Page opens",
                 ),
                 ExportStep(
+                    title="Submit login",
                     description="Submit form",
                     test_data=None,
                     expected_result="Dashboard opens",
@@ -67,7 +69,7 @@ def test_export_xlsx_roundtrip(tmp_path: Path) -> None:
         ),
     ]
 
-    result = build_xlsx_export(cases)
+    result = build_xlsx_export(cases, include_extra_testy_fields=True)
     workbook_path = tmp_path / "export.xlsx"
     workbook_path.write_bytes(result.content)
 
@@ -83,9 +85,11 @@ def test_export_xlsx_roundtrip(tmp_path: Path) -> None:
     assert [issue.key for issue in first.issues] == ["ES-1", "ES-2"]
     assert first.test_script_type == "steps"
     assert len(first.steps) == 2
+    assert first.steps[0].title == "Open login"
     assert first.steps[0].description == "Open page"
     assert first.steps[0].test_data == "user=admin"
     assert first.steps[0].expected_result == "Page opens"
+    assert first.steps[1].title == "Submit login"
     assert first.steps[1].description == "Submit form"
     assert first.steps[1].expected_result == "Dashboard opens"
 
@@ -94,3 +98,30 @@ def test_export_xlsx_roundtrip(tmp_path: Path) -> None:
     assert second.name == "Plain case"
     assert second.test_script_type == "plain"
     assert second.test_script_text == "Scenario text"
+
+
+@pytest.mark.skipif(openpyxl is None, reason="openpyxl is required for XLSX export")
+def test_export_xlsx_header_extra_fields_toggle(tmp_path: Path) -> None:
+    cases = [
+        ExportCase(
+            case_id=1,
+            key="ES-T1",
+            name="Header check",
+        )
+    ]
+
+    base_result = build_xlsx_export(cases)
+    base_path = tmp_path / "base.xlsx"
+    base_path.write_bytes(base_result.content)
+    base_wb = openpyxl.load_workbook(base_path, read_only=True, data_only=True)
+    base_headers = [cell for cell in next(base_wb.active.iter_rows(values_only=True))]
+    base_wb.close()
+    assert "Step Name" not in base_headers
+
+    extra_result = build_xlsx_export(cases, include_extra_testy_fields=True)
+    extra_path = tmp_path / "extra.xlsx"
+    extra_path.write_bytes(extra_result.content)
+    extra_wb = openpyxl.load_workbook(extra_path, read_only=True, data_only=True)
+    extra_headers = [cell for cell in next(extra_wb.active.iter_rows(values_only=True))]
+    extra_wb.close()
+    assert "Step Name" in extra_headers

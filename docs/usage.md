@@ -15,7 +15,7 @@
 1) Open `/plugins/zephyr-xml-importer/export/`.
 2) Select a project.
 3) Optionally scope by suite id or explicit case ids.
-4) Choose export options (metadata source, key strategy).
+4) Choose export options (metadata source, key strategy, extra TestY fields).
 5) Run export and download the XLSX file.
 
 ### API (multipart)
@@ -75,6 +75,7 @@ Fields:
 - `strip_zephyr_key_prefix` (default true)
 - `metadata_source` (attributes_then_meta_labels | attributes_only | meta_labels_only)
 - `key_strategy` (existing_only | synthetic)
+- `include_extra_testy_fields` (default false, adds `Step Name` column)
 
 Example:
 ```bash
@@ -87,6 +88,7 @@ curl -i \
   -F strip_zephyr_key_prefix=true \
   -F metadata_source=attributes_then_meta_labels \
   -F key_strategy=existing_only \
+  -F include_extra_testy_fields=true \
   https://<HOST>/plugins/zephyr-xml-importer/export/ \
   -o zephyr-scale-export.xlsx
 ```
@@ -146,7 +148,7 @@ Failed:
 1) Откройте `/plugins/zephyr-xml-importer/export/`.
 2) Выберите проект.
 3) Опционально укажите suite id или список case id.
-4) Выберите опции экспорта (источник метаданных, стратегия ключей).
+4) Выберите опции экспорта (источник метаданных, стратегия ключей, доп. поля TestY).
 5) Запустите экспорт и скачайте XLSX‑файл.
 
 ### API (multipart)
@@ -206,6 +208,7 @@ curl -i \
 - `strip_zephyr_key_prefix` (по умолчанию true)
 - `metadata_source` (attributes_then_meta_labels | attributes_only | meta_labels_only)
 - `key_strategy` (existing_only | synthetic)
+- `include_extra_testy_fields` (по умолчанию false, добавляет колонку `Step Name`)
 
 Пример:
 ```bash
@@ -218,6 +221,7 @@ curl -i \
   -F strip_zephyr_key_prefix=true \
   -F metadata_source=attributes_then_meta_labels \
   -F key_strategy=existing_only \
+  -F include_extra_testy_fields=true \
   https://<HOST>/plugins/zephyr-xml-importer/export/ \
   -o zephyr-scale-export.xlsx
 ```

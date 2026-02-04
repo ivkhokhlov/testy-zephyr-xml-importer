@@ -36,6 +36,18 @@ def test_mapping_step_placeholder_when_empty():
     assert payload["steps"][0]["scenario"] == "Step 1 (empty in Zephyr)"
 
 
+def test_mapping_step_name_uses_title_when_present():
+    tc = ZephyrTestCase(
+        zephyr_id="43",
+        key="ES-T1000",
+        name="Titled steps",
+        steps=[ZephyrStep(index=0, title="Login step", description="Do it")],
+        test_script_type="steps",
+    )
+    payload = build_testy_payload_from_zephyr(tc)
+    assert payload["steps"][0]["name"] == "Login step"
+
+
 def test_mapping_meta_labels_toggle_and_normalization():
     tc = ZephyrTestCase(
         zephyr_id="100",

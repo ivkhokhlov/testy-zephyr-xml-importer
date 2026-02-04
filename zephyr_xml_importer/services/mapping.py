@@ -135,6 +135,13 @@ def _build_step_scenario(step: ZephyrStep) -> str:
     return f"Step {step.index + 1} (empty in Zephyr)"
 
 
+def _build_step_name(step: ZephyrStep) -> str:
+    title = sanitize_html(step.title)
+    if title:
+        return title
+    return f"Step {step.index + 1}"
+
+
 def flatten_steps_to_scenario(steps: list[ZephyrStep]) -> str:
     parts: list[str] = []
     for s in sorted(steps, key=lambda x: x.index):
@@ -234,7 +241,7 @@ def build_testy_payload_from_zephyr(
         "steps": [
             {
                 "sort_order": s.index,
-                "name": f"Step {s.index + 1}",
+                "name": _build_step_name(s),
                 "scenario": _build_step_scenario(s),
                 "expected": sanitize_html(s.expected_result),
             }

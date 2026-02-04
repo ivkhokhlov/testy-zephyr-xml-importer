@@ -189,6 +189,7 @@ def build_export_response(
         strip_zephyr_key_prefix=request_data.strip_zephyr_key_prefix,
         metadata_source=request_data.metadata_source,
         key_strategy=request_data.key_strategy,
+        include_extra_testy_fields=request_data.include_extra_testy_fields,
     )
     filename = _build_export_filename(request_data.project_id)
     return result.content, filename

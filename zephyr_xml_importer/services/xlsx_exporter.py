@@ -36,10 +36,12 @@ XLSX_HEADERS: list[str] = [
     "Test Script (Plain Text)",
     "Test Script (BDD)",
 ]
+EXTRA_TESTY_HEADERS: list[str] = ["Step Name"]
 
 
 @dataclass(frozen=True, slots=True)
 class ExportStep:
+    title: str | None = None
     description: str | None = None
     test_data: str | None = None
     expected_result: str | None = None
@@ -70,19 +72,26 @@ class XlsxExportResult:
     warnings: list[str] = field(default_factory=list)
 
 
-def build_xlsx_export(cases: Iterable[ExportCase]) -> XlsxExportResult:
+def build_xlsx_export(
+    cases: Iterable[ExportCase], *, include_extra_testy_fields: bool = False
+) -> XlsxExportResult:
     if openpyxl is None:  # pragma: no cover - should be installed via dependencies
         raise RuntimeError("openpyxl is required to export Zephyr XLSX files") from _OPENPYXL_ERROR
 
     warnings: list[str] = []
+    headers = list(XLSX_HEADERS)
+    if include_extra_testy_fields:
+        headers.extend(EXTRA_TESTY_HEADERS)
     workbook = openpyxl.Workbook(write_only=True)
     worksheet = workbook.create_sheet(title="Test Cases")
-    worksheet.append(list(XLSX_HEADERS))
+    worksheet.append(headers)
 
     for case in cases:
         _collect_case_warnings(case, warnings)
-        for row_values, step_index in _iter_case_rows(case):
-            worksheet.append(_truncate_row(row_values, case, warnings, step_index))
+        for row_values, step_index in _iter_case_rows(
+            case, include_extra_testy_fields=include_extra_testy_fields
+        ):
+            worksheet.append(_truncate_row(row_values, case, warnings, step_index, headers))
 
     buffer = BytesIO()
     workbook.save(buffer)
@@ -116,7 +125,9 @@ def _format_case_warning(case: ExportCase, message: str) -> str:
     return message
 
 
-def _iter_case_rows(case: ExportCase) -> Iterator[tuple[list[object], int | None]]:
+def _iter_case_rows(
+    case: ExportCase, *, include_extra_testy_fields: bool
+) -> Iterator[tuple[list[object], int | None]]:
     labels_text = _join_tokens(case.labels)
     issues_text = _join_tokens(case.issues)
     has_steps = bool(case.steps)
@@ -145,6 +156,8 @@ def _iter_case_rows(case: ExportCase) -> Iterator[tuple[list[object], int | None
                 None,
                 None,
             ]
+            if include_extra_testy_fields:
+                row_values.append(step.title)
             yield row_values, idx + 1
         return
 
@@ -166,6 +179,8 @@ def _iter_case_rows(case: ExportCase) -> Iterator[tuple[list[object], int | None
         case.plain_text,
         case.bdd_text,
     ]
+    if include_extra_testy_fields:
+        row_values.append(None)
     yield row_values, None
 
 
@@ -181,10 +196,11 @@ def _truncate_row(
     case: ExportCase,
     warnings: list[str],
     step_index: int | None,
+    headers: Sequence[str],
 ) -> list[object]:
     truncated: list[object] = []
     for idx, value in enumerate(row):
-        column = XLSX_HEADERS[idx] if idx < len(XLSX_HEADERS) else f"Column {idx + 1}"
+        column = headers[idx] if idx < len(headers) else f"Column {idx + 1}"
         truncated.append(_truncate_cell(value, column, case, warnings, step_index))
     return truncated
 

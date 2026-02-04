@@ -40,6 +40,7 @@ def export_testy_cases_to_xlsx(
     strip_zephyr_key_prefix: bool = True,
     metadata_source: str = "attributes_then_meta_labels",
     key_strategy: str = "existing_only",
+    include_extra_testy_fields: bool = False,
 ) -> XlsxExportResult:
     export_cases = collect_testy_cases_for_export(
         project_id=project_id,
@@ -50,7 +51,9 @@ def export_testy_cases_to_xlsx(
         metadata_source=metadata_source,
         key_strategy=key_strategy,
     )
-    result = build_xlsx_export(export_cases)
+    result = build_xlsx_export(
+        export_cases, include_extra_testy_fields=include_extra_testy_fields
+    )
     if result.warnings:
         logger.warning("Zephyr XLSX export warnings: %s", "; ".join(result.warnings))
     return result
@@ -409,11 +412,13 @@ def _extract_steps(case: Any) -> list[ExportStep]:
     steps.sort(key=step_key)
     export_steps: list[ExportStep] = []
     for step in steps:
+        title = sanitize_html(getattr(step, "name", None))
         scenario = sanitize_html(getattr(step, "scenario", None))
         description, test_data = _split_step_scenario(scenario)
         expected = sanitize_html(getattr(step, "expected", None))
         export_steps.append(
             ExportStep(
+                title=title or None,
                 description=description or None,
                 test_data=test_data or None,
                 expected_result=expected or None,

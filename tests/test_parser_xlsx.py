@@ -35,6 +35,7 @@ def test_iter_test_cases_xlsx(tmp_path: Path) -> None:
             "Test Script (Step-by-Step) - Expected Result",
             "Test Script (Plain Text)",
             "Test Script (BDD)",
+            "Step Name",
         ]
     )
     ws.append(
@@ -55,6 +56,7 @@ def test_iter_test_cases_xlsx(tmp_path: Path) -> None:
             "Page opens",
             None,
             None,
+            "Open login",
         ]
     )
     ws.append(
@@ -75,6 +77,28 @@ def test_iter_test_cases_xlsx(tmp_path: Path) -> None:
             "Dashboard opens",
             None,
             None,
+            "Submit login",
+        ]
+    )
+    ws.append(
+        [
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            "Title only",
         ]
     )
     ws.append(
@@ -95,6 +119,7 @@ def test_iter_test_cases_xlsx(tmp_path: Path) -> None:
             None,
             "Scenario text",
             None,
+            None,
         ]
     )
     wb.save(workbook_path)
@@ -113,8 +138,10 @@ def test_iter_test_cases_xlsx(tmp_path: Path) -> None:
     assert first.test_script_type == "steps"
     assert first.test_script_text is None
     assert len(first.steps) == 2
+    assert first.steps[0].title == "Open login"
     assert first.steps[0].description == "Open page"
     assert first.steps[0].expected_result == "Page opens"
+    assert first.steps[1].title == "Submit login"
     assert first.steps[1].description == "Submit form"
     assert first.steps[1].expected_result == "Dashboard opens"
 

@@ -17,7 +17,8 @@
 - Always stores full Zephyr metadata in `attributes.zephyr`.
 
 ### Steps
-- `sort_order` = step index, `name` = `Step {index+1}`.
+- `sort_order` = step index.
+- `name` defaults to `Step {index+1}`; for XLSX imports, `Step Name` overrides when present.
 - `scenario` = description + testData (if present).
 - `expected` = expectedResult (sanitized).
 - If scenario is empty, a placeholder is used and a warning is emitted.
@@ -57,7 +58,8 @@
 - Всегда сохраняются метаданные в `attributes.zephyr`.
 
 ### Шаги
-- `sort_order` = индекс шага, `name` = `Step {index+1}`.
+- `sort_order` = индекс шага.
+- `name` по умолчанию `Step {index+1}`; при XLSX импортe берётся `Step Name`, если задано.
 - `scenario` = description + testData (если есть).
 - `expected` = expectedResult (санитайз).
 - Если сценарий пустой — ставится заглушка и выдаётся предупреждение.

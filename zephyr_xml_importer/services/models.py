@@ -19,6 +19,7 @@ class ZephyrIssue:
 @dataclass(frozen=True, slots=True)
 class ZephyrStep:
     index: int
+    title: str | None = None
     description: str | None = None
     expected_result: str | None = None
     test_data: str | None = None

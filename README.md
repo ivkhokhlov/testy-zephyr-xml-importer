@@ -104,4 +104,4 @@ pytest -q
 - `docs/deployment.md`
 - `docs/troubleshooting.md`
 
-Version: 0.1.5
+Version: 0.1.6

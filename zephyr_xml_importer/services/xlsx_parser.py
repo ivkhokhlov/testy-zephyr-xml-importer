@@ -30,6 +30,7 @@ HEADER_LABELS = "labels"
 HEADER_OWNER = "owner"
 HEADER_ISSUES = "issues"
 HEADER_STEP = "step"
+HEADER_STEP_TITLE = "step_title"
 HEADER_STEP_TEST_DATA = "step_test_data"
 HEADER_STEP_EXPECTED = "step_expected"
 HEADER_PLAIN_TEXT = "plain_text"
@@ -133,6 +134,8 @@ def _header_role(normalized: str) -> str | None:
         return HEADER_ISSUES
     if "testscript" in normalized and "stepbystep" in normalized and normalized.endswith("step"):
         return HEADER_STEP
+    if normalized in {"stepname", "steptitle", "stepheader"}:
+        return HEADER_STEP_TITLE
     if "testscript" in normalized and "stepbystep" in normalized and "testdata" in normalized:
         return HEADER_STEP_TEST_DATA
     if "testscript" in normalized and "stepbystep" in normalized and "expected" in normalized:
@@ -195,6 +198,7 @@ class _XlsxCaseBuilder:
 
     def add_step_from_row(self, row: tuple[Any, ...], header_index: dict[str, int]) -> None:
         step_value = _coerce_text(_row_value(row, header_index.get(HEADER_STEP)))
+        step_title = _coerce_text(_row_value(row, header_index.get(HEADER_STEP_TITLE)))
         test_data = _coerce_text(_row_value(row, header_index.get(HEADER_STEP_TEST_DATA)))
         expected = _coerce_text(_row_value(row, header_index.get(HEADER_STEP_EXPECTED)))
         if not any([step_value, test_data, expected]):
@@ -203,6 +207,7 @@ class _XlsxCaseBuilder:
         self.steps.append(
             ZephyrStep(
                 index=index,
+                title=step_title,
                 description=step_value,
                 test_data=test_data,
                 expected_result=expected,

@@ -35,6 +35,7 @@ class ExportRequestData:
     strip_zephyr_key_prefix: bool
     metadata_source: str
     key_strategy: str
+    include_extra_testy_fields: bool
 
 
 class ImportValidationError(ValueError):
@@ -218,6 +219,13 @@ def validate_export_request(data: Mapping[str, Any]) -> ExportRequestData:
     if key_strategy not in KEY_STRATEGY_CHOICES:
         errors["key_strategy"] = "key_strategy must be 'existing_only' or 'synthetic'"
 
+    include_extra_testy_fields = _coerce_bool(
+        _unwrap(data.get("include_extra_testy_fields")),
+        default=False,
+        field="include_extra_testy_fields",
+        errors=errors,
+    )
+
     case_ids_raw = _unwrap(data.get("case_ids"))
     case_ids: list[int] | None = None
     if case_ids_raw not in (None, ""):
@@ -258,6 +266,7 @@ def validate_export_request(data: Mapping[str, Any]) -> ExportRequestData:
         strip_zephyr_key_prefix=strip_zephyr_key_prefix,
         metadata_source=metadata_source,
         key_strategy=key_strategy,
+        include_extra_testy_fields=include_extra_testy_fields,
     )
 
 
@@ -303,3 +312,4 @@ if serializers:  # pragma: no cover - DRF optional for unit tests
             default="existing_only",
             choices=sorted(KEY_STRATEGY_CHOICES),
         )
+        include_extra_testy_fields = serializers.BooleanField(required=False, default=False)
