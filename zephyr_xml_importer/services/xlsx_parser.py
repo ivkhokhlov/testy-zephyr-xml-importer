@@ -134,7 +134,7 @@ def _header_role(normalized: str) -> str | None:
         return HEADER_ISSUES
     if "testscript" in normalized and "stepbystep" in normalized and normalized.endswith("step"):
         return HEADER_STEP
-    if normalized in {"stepname", "steptitle", "stepheader"}:
+    if normalized == "stepname":
         return HEADER_STEP_TITLE
     if "testscript" in normalized and "stepbystep" in normalized and "testdata" in normalized:
         return HEADER_STEP_TEST_DATA
