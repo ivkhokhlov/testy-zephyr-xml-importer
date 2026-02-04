@@ -15,6 +15,8 @@ from zephyr_xml_importer.services.xlsx_exporter import (
     build_xlsx_export,
 )
 from zephyr_xml_importer.services.xlsx_parser import iter_test_cases_xlsx
+from zephyr_xml_importer.services.importer import import_into_testy
+from zephyr_xml_importer.services.testy_adapter import InMemoryTestyAdapter
 
 
 @pytest.mark.skipif(openpyxl is None, reason="openpyxl is required for XLSX export")
@@ -94,3 +96,53 @@ def test_export_xlsx_roundtrip(tmp_path: Path) -> None:
     assert second.name == "Plain case"
     assert second.test_script_type == "plain"
     assert second.test_script_text == "Scenario text"
+
+
+@pytest.mark.skipif(openpyxl is None, reason="openpyxl is required for XLSX export")
+def test_export_xlsx_step_name_metadata_sheet_and_import_restore(tmp_path: Path) -> None:
+    cases = [
+        ExportCase(
+            case_id=10,
+            key="ES-T10",
+            name="Case with steps",
+            steps=[
+                ExportStep(
+                    sort_order=0,
+                    name="Open page",
+                    description="Open page",
+                    test_data=None,
+                    expected_result="Ok",
+                ),
+                ExportStep(
+                    sort_order=1,
+                    name="Submit form",
+                    description="Submit form",
+                    test_data=None,
+                    expected_result="Ok",
+                ),
+            ],
+            plain_text=None,
+            bdd_text=None,
+        )
+    ]
+
+    result = build_xlsx_export(cases, include_step_names=True)
+    workbook_path = tmp_path / "export-with-step-names.xlsx"
+    workbook_path.write_bytes(result.content)
+
+    wb = openpyxl.load_workbook(workbook_path, read_only=True, data_only=True)
+    try:
+        assert "Test Cases" in wb.sheetnames
+        assert "TestY Step Names" in wb.sheetnames
+        meta = wb["TestY Step Names"]
+        header = [cell.value for cell in next(meta.iter_rows(min_row=1, max_row=1))]
+        assert header[:4] == ["Key", "Case ID", "Step Sort Order", "Step Name"]
+    finally:
+        wb.close()
+
+    adapter = InMemoryTestyAdapter()
+    import_result = import_into_testy(result.content, project_id=1, adapter=adapter)
+    assert import_result.summary.cases == 1
+    created_case = next(iter(adapter.cases.values()))
+    imported_step_names = [step["name"] for step in created_case.payload.get("steps", [])]
+    assert imported_step_names == ["Open page", "Submit form"]

@@ -12,9 +12,21 @@ from .attachments import AttachmentZipIndex, build_zip_index
 from .mapping import build_testy_payload_from_zephyr, match_attachments_for_testcase
 from .parser import iter_test_cases, parse_folders_and_duplicate_key_counts
 from .report import ReportRow, build_csv_report
+from .step_names import (
+    StepNameOverridesParseError,
+    apply_step_names_to_payload,
+    merge_step_name_overrides,
+    parse_step_name_overrides,
+    validate_step_name_template,
+    warn_for_unknown_override_keys,
+)
 from .testy_adapter import BaseTestyAdapter, TestyAdapterError, TestyServiceAdapter
 from .validation import build_case_warnings, build_duplicate_key_counts
-from .xlsx_parser import build_folders_from_cases, iter_test_cases_xlsx
+from .xlsx_parser import (
+    build_folders_from_cases,
+    iter_test_cases_xlsx,
+    parse_step_name_overrides_xlsx,
+)
 
 
 NO_FOLDER_SUITE_NAME = "(No folder)"
@@ -188,6 +200,8 @@ def dry_run_import(
     meta_labels: bool = True,
     append_jira_issues_to_description: bool = True,
     embed_testdata_to_description: bool = True,
+    step_name_template: str | None = None,
+    step_name_overrides: str | Path | BinaryIO | bytes | None = None,
 ) -> DryRunImportResult:
     zip_index = _build_zip_index(attachments_zip)
 
@@ -195,25 +209,49 @@ def dry_run_import(
     warnings: list[str] = []
     seen_warnings: set[str] = set()
 
+    template, template_warnings = validate_step_name_template(step_name_template)
+    _collect_warnings(template_warnings, warnings, seen_warnings)
+
+    try:
+        user_overrides, overrides_warnings = parse_step_name_overrides(step_name_overrides)
+    except StepNameOverridesParseError as exc:
+        raise TestyAdapterError(str(exc)) from exc
+
+    _collect_warnings(overrides_warnings, warnings, seen_warnings)
+
     case_count = 0
     step_count = 0
     label_count = 0
     attachment_count = 0
+    case_keys_seen: set[str] = set()
+    missing_key_cases = 0
 
     def handle_cases(
         case_iter: Iterator[Any],
         folders: Mapping[str, Any],
         duplicate_key_counts: Mapping[str, int],
+        overrides: dict[str, dict[int, str]],
     ) -> None:
         nonlocal case_count, step_count, label_count, attachment_count
+        nonlocal missing_key_cases
         for tc in case_iter:
             case_count += 1
+            if tc.key:
+                case_keys_seen.add(str(tc.key).strip())
+            else:
+                missing_key_cases += 1
             payload = build_testy_payload_from_zephyr(
                 tc,
                 prefix_with_zephyr_key=prefix_with_zephyr_key,
                 meta_labels=meta_labels,
                 append_jira_issues_to_description=append_jira_issues_to_description,
                 embed_testdata_to_description=embed_testdata_to_description,
+            )
+            step_name_warnings = apply_step_names_to_payload(
+                tc,
+                payload,
+                template=template,
+                overrides=overrides,
             )
             steps = payload.get("steps", [])
             labels = payload.get("labels", [])
@@ -229,7 +267,7 @@ def dry_run_import(
             )
             attachment_count += attachment_result.attachments_in_xml
 
-            row_warnings = [*case_warnings, *attachment_result.warnings]
+            row_warnings = [*case_warnings, *attachment_result.warnings, *step_name_warnings]
             _collect_warnings(row_warnings, warnings, seen_warnings)
 
             rows.append(
@@ -252,15 +290,28 @@ def dry_run_import(
 
     source_kind, prepared_source = _prepare_source(xml_source)
     if source_kind == "xlsx":
+        xlsx_overrides, xlsx_override_warnings = parse_step_name_overrides_xlsx(prepared_source)
+        _collect_warnings(xlsx_override_warnings, warnings, seen_warnings)
+        merged_overrides = merge_step_name_overrides(xlsx_overrides, user_overrides)
         cases = list(iter_test_cases_xlsx(prepared_source))
         folders = build_folders_from_cases(cases)
         duplicate_key_counts = build_duplicate_key_counts(cases)
-        handle_cases(iter(cases), folders, duplicate_key_counts)
+        handle_cases(iter(cases), folders, duplicate_key_counts, merged_overrides)
     else:
+        merged_overrides = user_overrides
         with _open_seekable_xml_source(prepared_source) as xml_stream:
             folders, duplicate_key_counts = parse_folders_and_duplicate_key_counts(xml_stream)
             xml_stream.seek(0)
-            handle_cases(iter_test_cases(xml_stream), folders, duplicate_key_counts)
+            handle_cases(iter_test_cases(xml_stream), folders, duplicate_key_counts, merged_overrides)
+
+    unknown_override_warnings = warn_for_unknown_override_keys(merged_overrides, case_keys_seen)
+    _collect_warnings(unknown_override_warnings, warnings, seen_warnings)
+    if merged_overrides and missing_key_cases:
+        _collect_warnings(
+            ["Some test cases have no key; step_name_overrides could not be applied to them"],
+            warnings,
+            seen_warnings,
+        )
 
     summary = ImportSummary(
         folders=len(folders),
@@ -303,6 +354,8 @@ def import_into_testy(
     meta_labels: bool = True,
     append_jira_issues_to_description: bool = True,
     embed_testdata_to_description: bool = True,
+    step_name_template: str | None = None,
+    step_name_overrides: str | Path | BinaryIO | bytes | None = None,
     on_duplicate: str = "skip",
     adapter: BaseTestyAdapter | None = None,
     user: Any | None = None,
@@ -318,6 +371,18 @@ def import_into_testy(
     warnings: list[str] = []
     seen_warnings: set[str] = set()
 
+    template, template_warnings = validate_step_name_template(step_name_template)
+    _collect_warnings(template_warnings, warnings, seen_warnings)
+
+    try:
+        user_overrides, overrides_warnings = parse_step_name_overrides(step_name_overrides)
+    except StepNameOverridesParseError as exc:
+        raise TestyAdapterError(str(exc)) from exc
+    _collect_warnings(overrides_warnings, warnings, seen_warnings)
+
+    case_keys_seen: set[str] = set()
+    missing_key_cases = 0
+
     case_count = 0
     step_count = 0
     label_count = 0
@@ -332,9 +397,11 @@ def import_into_testy(
         case_iter: Iterator[Any],
         folders: Mapping[str, Any],
         duplicate_key_counts: Mapping[str, int],
+        overrides: dict[str, dict[int, str]],
     ) -> None:
         nonlocal case_count, step_count, label_count, attachment_count
         nonlocal created_count, reused_count, updated_count, skipped_count, failed_count
+        nonlocal missing_key_cases
 
         suite_cache: dict[tuple[int | None, str], int] = {}
 
@@ -386,12 +453,22 @@ def import_into_testy(
 
         for tc in case_iter:
             case_count += 1
+            if tc.key:
+                case_keys_seen.add(str(tc.key).strip())
+            else:
+                missing_key_cases += 1
             payload = build_testy_payload_from_zephyr(
                 tc,
                 prefix_with_zephyr_key=prefix_with_zephyr_key,
                 meta_labels=meta_labels,
                 append_jira_issues_to_description=append_jira_issues_to_description,
                 embed_testdata_to_description=embed_testdata_to_description,
+            )
+            step_name_warnings = apply_step_names_to_payload(
+                tc,
+                payload,
+                template=template,
+                overrides=overrides,
             )
             payload_for_write = _payload_without_labels(payload)
             steps = payload.get("steps", [])
@@ -408,7 +485,7 @@ def import_into_testy(
             )
             attachment_count += attachment_result.attachments_in_xml
 
-            row_warnings = [*case_warnings, *attachment_result.warnings]
+            row_warnings = [*case_warnings, *attachment_result.warnings, *step_name_warnings]
 
             action = "created"
             case_id: int | None = None
@@ -506,18 +583,31 @@ def import_into_testy(
     try:
         source_kind, prepared_source = _prepare_source(xml_source)
         if source_kind == "xlsx":
+            xlsx_overrides, xlsx_override_warnings = parse_step_name_overrides_xlsx(prepared_source)
+            _collect_warnings(xlsx_override_warnings, warnings, seen_warnings)
+            merged_overrides = merge_step_name_overrides(xlsx_overrides, user_overrides)
             cases = list(iter_test_cases_xlsx(prepared_source))
             folders = build_folders_from_cases(cases)
             duplicate_key_counts = build_duplicate_key_counts(cases)
-            run_import(iter(cases), folders, duplicate_key_counts)
+            run_import(iter(cases), folders, duplicate_key_counts, merged_overrides)
         else:
+            merged_overrides = user_overrides
             with _open_seekable_xml_source(prepared_source) as xml_stream:
                 folders, duplicate_key_counts = parse_folders_and_duplicate_key_counts(xml_stream)
                 xml_stream.seek(0)
-                run_import(iter_test_cases(xml_stream), folders, duplicate_key_counts)
+                run_import(iter_test_cases(xml_stream), folders, duplicate_key_counts, merged_overrides)
     finally:
         if zip_archive is not None:
             zip_archive.close()
+
+    unknown_override_warnings = warn_for_unknown_override_keys(merged_overrides, case_keys_seen)
+    _collect_warnings(unknown_override_warnings, warnings, seen_warnings)
+    if merged_overrides and missing_key_cases:
+        _collect_warnings(
+            ["Some test cases have no key; step_name_overrides could not be applied to them"],
+            warnings,
+            seen_warnings,
+        )
 
     summary = ImportSummary(
         folders=len(folders),

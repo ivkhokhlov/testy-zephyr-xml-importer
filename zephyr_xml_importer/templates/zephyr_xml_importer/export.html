@@ -303,6 +303,14 @@
                   <input id="strip-key-prefix" type="checkbox" checked>
                   Strip “[KEY] ” prefix from names
                 </label>
+                <label class="option">
+                  <input id="include-step-names" type="checkbox">
+                  Include TestY step titles (metadata sheet)
+                </label>
+              </div>
+              <div class="hint">
+                Adds a “TestY Step Names” worksheet for round‑trip imports. Zephyr import tooling may
+                ignore or reject extra sheets; keep disabled if unsure.
               </div>
             </div>
 
@@ -458,6 +466,10 @@
           formData.set(
             "strip_zephyr_key_prefix",
             document.getElementById("strip-key-prefix").checked ? "true" : "false"
+          );
+          formData.set(
+            "include_step_names",
+            document.getElementById("include-step-names").checked ? "true" : "false"
           );
           formData.set("metadata_source", document.getElementById("metadata-source").value);
           formData.set("key_strategy", document.getElementById("key-strategy").value);

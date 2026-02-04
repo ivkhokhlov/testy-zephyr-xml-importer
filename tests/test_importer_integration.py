@@ -154,6 +154,80 @@ def test_import_precreates_folder_tree_from_folders_list():
     assert auth.attributes["zephyr"]["folderFullPath"] == "api/auth"
 
 
+def test_import_applies_step_name_template_to_steps():
+    xml = """<project>
+  <testCases>
+    <testCase id="1" key="EX-STEPS-1">
+      <name>Case one</name>
+      <folder>ui</folder>
+      <testScript type="steps">
+        <steps>
+          <step index="0">
+            <description>Open login page</description>
+            <expectedResult>Login form visible</expectedResult>
+          </step>
+          <step index="1">
+            <description>Submit credentials</description>
+            <expectedResult>Dashboard opens</expectedResult>
+          </step>
+        </steps>
+      </testScript>
+    </testCase>
+  </testCases>
+</project>"""
+    adapter = InMemoryTestyAdapter()
+
+    result = import_into_testy(
+        xml.encode("utf-8"),
+        project_id=1,
+        adapter=adapter,
+        step_name_template="{index}. {description}",
+    )
+
+    assert result.summary.cases == 1
+    case = next(iter(adapter.cases.values()))
+    step_names = [step["name"] for step in case.payload.get("steps", [])]
+    assert step_names == ["1. Open login page", "2. Submit credentials"]
+
+
+def test_import_applies_step_name_overrides_with_precedence_over_template():
+    xml = """<project>
+  <testCases>
+    <testCase id="1" key="EX-STEPS-2">
+      <name>Case two</name>
+      <folder>ui</folder>
+      <testScript type="steps">
+        <steps>
+          <step index="0">
+            <description>Step one</description>
+            <expectedResult>Ok</expectedResult>
+          </step>
+          <step index="1">
+            <description>Step two</description>
+            <expectedResult>Ok</expectedResult>
+          </step>
+        </steps>
+      </testScript>
+    </testCase>
+  </testCases>
+</project>"""
+    overrides_csv = b"key,step_index,name\nEX-STEPS-2,2,Custom name\n"
+    adapter = InMemoryTestyAdapter()
+
+    result = import_into_testy(
+        xml.encode("utf-8"),
+        project_id=1,
+        adapter=adapter,
+        step_name_template="{index}. {description}",
+        step_name_overrides=overrides_csv,
+    )
+
+    assert result.summary.cases == 1
+    case = next(iter(adapter.cases.values()))
+    step_names = [step["name"] for step in case.payload.get("steps", [])]
+    assert step_names == ["1. Step one", "Custom name"]
+
+
 @pytest.mark.skipif(openpyxl is None, reason="openpyxl is required for XLSX parsing")
 def test_import_sets_suite_description_from_folder_description(tmp_path: Path) -> None:
     workbook_path = tmp_path / "folders.xlsx"

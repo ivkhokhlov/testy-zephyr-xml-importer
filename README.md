@@ -8,6 +8,7 @@ project and exports TestY test cases back into a Zephyr Scale compatible XLSX fi
 ### Features
 - Import a single XML or XLSX file with optional attachments ZIP.
 - Export TestY suites/cases to Zephyr Scale compatible XLSX.
+- Optional: preserve and restore TestY step titles via template/overrides and XLSX metadata sheet.
 - Dry‑run with full validation, warnings, and CSV report.
 - HTML UI + API endpoint.
 - Idempotent import by `attributes.zephyr.key` (skip or upsert).
@@ -41,6 +42,8 @@ Fields:
 - `meta_labels` (default true)
 - `append_jira_issues_to_description` (default true)
 - `embed_testdata_to_description` (default true)
+- `step_name_template` (optional; e.g. `{index}. {description}`)
+- `step_name_overrides` (optional; CSV/JSON file)
 - `on_duplicate` (skip|upsert, default skip)
 
 ### Docs
@@ -94,6 +97,8 @@ pytest -q
 - `meta_labels` (по умолчанию true)
 - `append_jira_issues_to_description` (по умолчанию true)
 - `embed_testdata_to_description` (по умолчанию true)
+- `step_name_template` (опционально; например `{index}. {description}`)
+- `step_name_overrides` (опционально; CSV/JSON файл)
 - `on_duplicate` (skip|upsert, по умолчанию skip)
 
 ### Документация
@@ -104,4 +109,4 @@ pytest -q
 - `docs/deployment.md`
 - `docs/troubleshooting.md`
 
-Version: 0.1.5
+Version: 0.1.6

@@ -184,3 +184,30 @@ def test_dry_run_accepts_non_seekable_stream():
 
     assert result.summary.cases == 2
     assert "Duplicate Zephyr key in XML: DUP-1" in result.warnings
+
+
+def test_dry_run_warns_for_unknown_override_keys_and_invalid_step_indices(tmp_path):
+    xml = """<project>
+  <testCases>
+    <testCase id="1" key="EX-1">
+      <name>Case one</name>
+      <folder>Root</folder>
+      <testScript type="steps">
+        <steps>
+          <step index="0">
+            <description>Do it</description>
+            <expectedResult>Ok</expectedResult>
+          </step>
+        </steps>
+      </testScript>
+    </testCase>
+  </testCases>
+</project>"""
+    xml_path = tmp_path / "cases.xml"
+    xml_path.write_text(xml, encoding="utf-8")
+    overrides_csv = b"key,step_index,name\nEX-1,2,Too far\nMISSING-1,1,Other\n"
+
+    result = dry_run_import(xml_path, step_name_overrides=overrides_csv)
+
+    assert "Step name override out of range for case EX-1: step_index=2" in result.warnings
+    assert "Step name override key not found in import payload: MISSING-1" in result.warnings

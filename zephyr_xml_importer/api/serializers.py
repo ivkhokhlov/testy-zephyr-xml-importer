@@ -23,6 +23,8 @@ class ImportRequestData:
     meta_labels: bool
     append_jira_issues_to_description: bool
     embed_testdata_to_description: bool
+    step_name_template: str | None
+    step_name_overrides: str | Path | BinaryIO | bytes | None
     on_duplicate: str
 
 
@@ -35,6 +37,7 @@ class ExportRequestData:
     strip_zephyr_key_prefix: bool
     metadata_source: str
     key_strategy: str
+    include_step_names: bool
 
 
 class ImportValidationError(ValueError):
@@ -138,6 +141,18 @@ def validate_import_request(data: Mapping[str, Any]) -> ImportRequestData:
         errors=errors,
     )
 
+    step_name_template_raw = _unwrap(data.get("step_name_template"))
+    step_name_template: str | None = None
+    if step_name_template_raw is not None:
+        if isinstance(step_name_template_raw, str):
+            step_name_template = step_name_template_raw.strip() or None
+        else:
+            errors["step_name_template"] = "step_name_template must be a string"
+
+    step_name_overrides = _unwrap(data.get("step_name_overrides"))
+    if step_name_overrides is not None and not _is_file_source(step_name_overrides):
+        errors["step_name_overrides"] = "step_name_overrides must be a file"
+
     on_duplicate_raw = _unwrap(data.get("on_duplicate", "skip"))
     on_duplicate = str(on_duplicate_raw).strip().lower() if on_duplicate_raw is not None else "skip"
     if on_duplicate not in ON_DUPLICATE_CHOICES:
@@ -155,6 +170,8 @@ def validate_import_request(data: Mapping[str, Any]) -> ImportRequestData:
         meta_labels=meta_labels,
         append_jira_issues_to_description=append_jira_issues_to_description,
         embed_testdata_to_description=embed_testdata_to_description,
+        step_name_template=step_name_template,
+        step_name_overrides=step_name_overrides,
         on_duplicate=on_duplicate,
     )
 
@@ -218,6 +235,13 @@ def validate_export_request(data: Mapping[str, Any]) -> ExportRequestData:
     if key_strategy not in KEY_STRATEGY_CHOICES:
         errors["key_strategy"] = "key_strategy must be 'existing_only' or 'synthetic'"
 
+    include_step_names = _coerce_bool(
+        _unwrap(data.get("include_step_names")),
+        default=False,
+        field="include_step_names",
+        errors=errors,
+    )
+
     case_ids_raw = _unwrap(data.get("case_ids"))
     case_ids: list[int] | None = None
     if case_ids_raw not in (None, ""):
@@ -258,6 +282,7 @@ def validate_export_request(data: Mapping[str, Any]) -> ExportRequestData:
         strip_zephyr_key_prefix=strip_zephyr_key_prefix,
         metadata_source=metadata_source,
         key_strategy=key_strategy,
+        include_step_names=include_step_names,
     )
 
 
@@ -277,6 +302,12 @@ if serializers:  # pragma: no cover - DRF optional for unit tests
         meta_labels = serializers.BooleanField(required=False, default=True)
         append_jira_issues_to_description = serializers.BooleanField(required=False, default=True)
         embed_testdata_to_description = serializers.BooleanField(required=False, default=True)
+        step_name_template = serializers.CharField(
+            required=False,
+            allow_blank=True,
+            allow_null=True,
+        )
+        step_name_overrides = serializers.FileField(required=False, allow_null=True)
         on_duplicate = serializers.ChoiceField(
             required=False,
             default="skip",
@@ -303,3 +334,4 @@ if serializers:  # pragma: no cover - DRF optional for unit tests
             default="existing_only",
             choices=sorted(KEY_STRATEGY_CHOICES),
         )
+        include_step_names = serializers.BooleanField(required=False, default=False)

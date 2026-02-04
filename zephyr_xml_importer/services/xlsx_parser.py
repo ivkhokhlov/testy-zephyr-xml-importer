@@ -35,6 +35,12 @@ HEADER_STEP_EXPECTED = "step_expected"
 HEADER_PLAIN_TEXT = "plain_text"
 HEADER_BDD = "bdd"
 
+STEP_NAME_SHEET_TITLE = "TestY Step Names"
+STEP_NAME_HEADER_KEY = "step_name_key"
+STEP_NAME_HEADER_CASE_ID = "step_name_case_id"
+STEP_NAME_HEADER_SORT_ORDER = "step_name_sort_order"
+STEP_NAME_HEADER_NAME = "step_name_name"
+
 
 @contextmanager
 def _open_workbook(source: str | Path | BinaryIO | bytes) -> Iterator[Any]:
@@ -151,6 +157,30 @@ def _build_header_index(header_row: tuple[Any, ...]) -> dict[str, int]:
         if not normalized:
             continue
         role = _header_role(normalized)
+        if role and role not in header_index:
+            header_index[role] = idx
+    return header_index
+
+
+def _step_name_header_role(normalized: str) -> str | None:
+    if normalized == "key":
+        return STEP_NAME_HEADER_KEY
+    if normalized in {"caseid", "testycaseid"}:
+        return STEP_NAME_HEADER_CASE_ID
+    if normalized in {"stepsortorder", "stepsort", "sortorder"}:
+        return STEP_NAME_HEADER_SORT_ORDER
+    if normalized in {"stepname", "steptitle"} or ("step" in normalized and "name" in normalized):
+        return STEP_NAME_HEADER_NAME
+    return None
+
+
+def _build_step_name_header_index(header_row: tuple[Any, ...]) -> dict[str, int]:
+    header_index: dict[str, int] = {}
+    for idx, raw in enumerate(header_row):
+        normalized = _normalize_header(raw)
+        if not normalized:
+            continue
+        role = _step_name_header_role(normalized)
         if role and role not in header_index:
             header_index[role] = idx
     return header_index
@@ -322,6 +352,95 @@ def iter_test_cases_xlsx(source: str | Path | BinaryIO | bytes) -> Iterator[Zeph
 
         if current is not None:
             yield current.to_test_case()
+
+
+def parse_step_name_overrides_xlsx(
+    source: str | Path | BinaryIO | bytes,
+    *,
+    sheet_title: str = STEP_NAME_SHEET_TITLE,
+) -> tuple[dict[str, dict[int, str]], list[str]]:
+    overrides: dict[str, dict[int, str]] = {}
+    warnings: list[str] = []
+
+    with _open_workbook(source) as workbook:
+        sheet = None
+        normalized_target = _normalize_header(sheet_title)
+        for name in workbook.sheetnames:
+            if _normalize_header(name) == normalized_target:
+                sheet = workbook[name]
+                break
+        if sheet is None:
+            return overrides, warnings
+
+        rows = sheet.iter_rows(values_only=True)
+        try:
+            header_row = next(rows)
+        except StopIteration:
+            return overrides, warnings
+
+        header_index = _build_step_name_header_index(tuple(header_row))
+        if STEP_NAME_HEADER_KEY not in header_index:
+            warnings.append(
+                f"Step-name metadata sheet '{sheet_title}' is missing 'Key' column; ignoring"
+            )
+            return overrides, warnings
+        if STEP_NAME_HEADER_SORT_ORDER not in header_index:
+            warnings.append(
+                f"Step-name metadata sheet '{sheet_title}' is missing 'Step Sort Order' column; "
+                "ignoring"
+            )
+            return overrides, warnings
+        if STEP_NAME_HEADER_NAME not in header_index:
+            warnings.append(
+                f"Step-name metadata sheet '{sheet_title}' is missing 'Step Name' column; ignoring"
+            )
+            return overrides, warnings
+
+        for row_number, row in enumerate(rows, start=2):
+            row_tuple = tuple(row)
+            if not _row_has_any_value(row_tuple):
+                continue
+
+            key_value = _coerce_text(_row_value(row_tuple, header_index.get(STEP_NAME_HEADER_KEY)))
+            if not key_value:
+                warnings.append(
+                    f"Step-name metadata row {row_number}: missing key; skipping"
+                )
+                continue
+
+            sort_raw = _row_value(row_tuple, header_index.get(STEP_NAME_HEADER_SORT_ORDER))
+            try:
+                sort_order = int(str(sort_raw).strip())
+            except Exception:
+                warnings.append(
+                    f"Step-name metadata row {row_number}: invalid sort order '{sort_raw}' "
+                    f"for {key_value}; skipping"
+                )
+                continue
+            if sort_order < 0:
+                warnings.append(
+                    f"Step-name metadata row {row_number}: negative sort order {sort_order} "
+                    f"for {key_value}; skipping"
+                )
+                continue
+
+            name_value = _coerce_text(_row_value(row_tuple, header_index.get(STEP_NAME_HEADER_NAME)))
+            if name_value is None:
+                warnings.append(
+                    f"Step-name metadata row {row_number}: missing step name for {key_value}; "
+                    "skipping"
+                )
+                continue
+            cleaned_name = " ".join(name_value.split())
+            if not cleaned_name:
+                warnings.append(
+                    f"Step-name metadata row {row_number}: empty step name for {key_value}; skipping"
+                )
+                continue
+
+            overrides.setdefault(key_value, {})[sort_order] = cleaned_name
+
+    return overrides, warnings
 
 
 def build_folders_from_cases(cases: list[ZephyrTestCase]) -> dict[str, ZephyrFolder]:

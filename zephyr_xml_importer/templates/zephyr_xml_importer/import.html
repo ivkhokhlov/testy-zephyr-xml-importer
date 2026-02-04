@@ -322,6 +322,33 @@
               </select>
             </div>
 
+            <div class="field">
+              <label for="step-name-template">Step titles (optional)</label>
+              <input
+                id="step-name-template"
+                name="step_name_template"
+                type="text"
+                placeholder="e.g. {index}. {description}"
+              >
+              <div class="hint">
+                Variables: {index}, {index0}, {key}, {case_name}, {description}, {expected}.
+                Precedence: overrides &gt; template &gt; default (“Step N”).
+              </div>
+            </div>
+
+            <div class="field">
+              <label for="step-name-overrides">Step title overrides (optional, CSV/JSON)</label>
+              <input
+                id="step-name-overrides"
+                name="step_name_overrides"
+                type="file"
+                accept=".csv,.json"
+              >
+              <div class="hint">
+                CSV header: key,step_index,name (step_index is 1-based). JSON: [{"key":"ES-T560","step_index":1,"name":"Open login page"}].
+              </div>
+            </div>
+
             <div class="actions">
               <button class="primary" id="run-btn" type="submit">Run</button>
               <button id="download-btn" type="button" disabled>Download CSV report</button>
@@ -514,6 +541,16 @@
             document.getElementById("embed-testdata").checked ? "true" : "false"
           );
           formData.set("on_duplicate", document.getElementById("on-duplicate").value);
+
+          const stepNameTemplate = document.getElementById("step-name-template").value;
+          if (stepNameTemplate) {
+            formData.set("step_name_template", stepNameTemplate);
+          }
+
+          const stepNameOverrides = document.getElementById("step-name-overrides");
+          if (stepNameOverrides && stepNameOverrides.files && stepNameOverrides.files[0]) {
+            formData.set("step_name_overrides", stepNameOverrides.files[0]);
+          }
 
           const csrfToken = getCookie("csrftoken");
           const headers = {};
